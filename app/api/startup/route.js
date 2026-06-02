@@ -15,7 +15,9 @@
 // }
 
 import { NextResponse } from "next/server";
-import { getAccessToken } from "@/lib/ezyvet/auth";
+// import { getAccessToken } from "@/lib/ezyvet/auth";
+import { getAccessToken } from "../../../lib/ezyvet/auth";
+
 
 // Appointment type names that should never appear in the public booking UI.
 // Add any "Block Out - Unavailable" or internal types your clinic uses.

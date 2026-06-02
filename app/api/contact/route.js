@@ -9,7 +9,10 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import { NextResponse } from "next/server";
-import { getAccessToken } from "@/lib/ezyvet/auth";
+// import { getAccessToken } from "@/lib/ezyvet/auth";
+import { getAccessToken } from "../../../lib/ezyvet/auth";
+
+
 
 export async function GET(req) {
   try {
