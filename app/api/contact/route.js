@@ -1,22 +1,32 @@
+// src/app/api/contact/route.js
+// GET /api/contact?email=X  or  GET /api/contact?phone=X
+//
+// Searches contacts by matching against embedded contact_detail_list.
+// type_id 1 = email, type_id 3 = phone/mobile
+// Paginates through contacts 200 at a time until a match is found.
+
 import { NextResponse } from "next/server";
 import { getAccessToken } from "@/lib/ezyvet/auth";
 
-const CORS = process.env.ALLOWED_ORIGIN ?? "*";
+const CORS       = process.env.ALLOWED_ORIGIN ?? "*";
 const EMAIL_TYPE = 1;
 const PHONE_TYPE = 3;
+
+const normalizePhone = (val = "") => val.replace(/[\s\-().+]/g, "");
 
 export async function GET(req) {
   try {
     const { searchParams } = new URL(req.url);
-    const email = searchParams.get("email")?.toLowerCase();
-    if (!email)
-      return NextResponse.json({ error: "email required" }, { status: 400 });
+    const email = searchParams.get("email")?.trim().toLowerCase();
+    const phone = searchParams.get("phone")?.trim();
+
+    if (!email && !phone)
+      return NextResponse.json({ error: "email or phone required" }, { status: 400 });
 
     const token   = await getAccessToken();
     const base    = process.env.EZYVET_BASE_URL;
     const headers = { Authorization: `Bearer ${token}` };
 
-    // ── Paginate through contacts matching email in contact_detail_list ──────
     let contact = null;
     let page    = 1;
     const limit = 200;
@@ -28,25 +38,33 @@ export async function GET(req) {
       );
       const data  = await res.json();
       const items = data.items ?? [];
-
-      // Stop if no more pages
       if (items.length === 0) break;
 
-      // Find contact whose contact_detail_list contains the email
       const found = items.find(i => {
-        const c = i.contact ?? i;
-        return (c.contact_detail_list ?? []).some(
-          d => d.type_id === EMAIL_TYPE &&
-               d.value?.toLowerCase() === email
-        );
+        const c       = i.contact ?? i;
+        const details = c.contact_detail_list ?? [];
+
+        if (email) {
+          const emailMatch = details.some(
+            d => d.type_id === EMAIL_TYPE &&
+                 d.value?.trim().toLowerCase() === email
+          );
+          if (emailMatch) return true;
+        }
+
+        if (phone) {
+          const normalizedInput = normalizePhone(phone);
+          const phoneMatch = details.some(
+            d => d.type_id === PHONE_TYPE &&
+                 normalizePhone(d.value) === normalizedInput
+          );
+          if (phoneMatch) return true;
+        }
+
+        return false;
       });
 
-      if (found) {
-        contact = found.contact ?? found;
-        break;
-      }
-
-      // Stop if we've reached the last page
+      if (found) { contact = found.contact ?? found; break; }
       if (items.length < limit) break;
       page++;
     }
@@ -57,7 +75,6 @@ export async function GET(req) {
       return r;
     }
 
-    // ── Fetch animals for this contact ───────────────────────────────────────
     const aRes    = await fetch(
       `${base}/v2/animal?active=1&contact_id=${contact.id}&limit=20`,
       { headers }
@@ -77,10 +94,9 @@ export async function GET(req) {
       };
     });
 
-    // Extract email and phone for display
     const detailList    = contact.contact_detail_list ?? [];
-    const email_address = detailList.find(d => d.type_id === EMAIL_TYPE)?.value ?? email;
-    const phone_number  = detailList.find(d => d.type_id === PHONE_TYPE)?.value ?? "";
+    const email_address = detailList.find(d => d.type_id === EMAIL_TYPE)?.value ?? email ?? "";
+    const phone_number  = detailList.find(d => d.type_id === PHONE_TYPE)?.value ?? phone ?? "";
 
     const r = NextResponse.json({
       found: true,
@@ -106,7 +122,7 @@ export async function OPTIONS() {
   return new NextResponse(null, {
     status: 204,
     headers: {
-      "Access-Control-Allow-Origin":  process.env.ALLOWED_ORIGIN ?? "*",
+      "Access-Control-Allow-Origin":  CORS,
       "Access-Control-Allow-Methods": "GET, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type",
     },
