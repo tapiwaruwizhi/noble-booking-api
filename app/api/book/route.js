@@ -1,145 +1,128 @@
-// ═══════════════════════════════════════════════════════════════════════════════
-// FILE: src/app/api/book/route.js
-// POST /api/book
-//
-// Body (JSON):
-// {
-//   email:          "user@example.com",
-//   owner_name:     "Sarah Al-Mansoori",      // for new contacts
-//   owner_phone:    "+971 50 123 4567",        // for new contacts
-//   contact_id:     "contact_123",             // existing contacts only
-//   animal_id:      "animal_456",              // existing animals only
-//   new_pet: {                                  // new animals only
-//     name:    "Luna",
-//     species: "Cat",
-//     breed:   "British Shorthair"
-//   },
-//   appt_type_uid:  "appointmentType_xxx",
-//   resource_uid:   "resource_xxx",
-//   start_time:     1748833200,                // Unix timestamp
-//   end_time:       1748836800,
-//   description:    "General consultation"
-// }
-// ═══════════════════════════════════════════════════════════════════════════════
-
+// src/app/api/startup/route.js
 import { NextResponse } from "next/server";
-// import { getAccessToken } from "@/lib/ezyvet/auth";
-import { getAccessToken } from "../../../lib/ezyvet/auth";
+import { getAccessToken } from "@/lib/ezyvet/auth";
 
+const CORS        = process.env.ALLOWED_ORIGIN ?? "*";
+const NON_BOOKABLE = ["block out","unavailable","blocked","internal","lunch","zero time","boarding availability","vvn","peerlogic","mri","drug pickup","test postman","google"];
+const isBookable  = (name = "") => !NON_BOOKABLE.some(kw => name.toLowerCase().includes(kw));
 
+// ── Branch photos keyed by separationId ──────────────────────────────────────
+// Replace URLs with real Noble Vet branch photos.
+// These can be Vercel /public/ paths e.g. "/photos/dip.jpg"
+// or full URLs e.g. from Cloudinary / Google Drive / your CDN.
+const BRANCH_PHOTOS = {
+  1:  process.env.BRANCH_PHOTO_1  ?? null,  // API Sandbox → replace with DIP photo
+  4:  process.env.BRANCH_PHOTO_1  ?? null,  // Department A → replace with branch photo
+  5:  process.env.BRANCH_PHOTO_1  ?? null,  // Department B
+  9:  process.env.BRANCH_PHOTO_1  ?? null,  // Department C
+  11: process.env.BRANCH_PHOTO_1 ?? null,  // Business unit A
+  13: process.env.BRANCH_PHOTO_1 ?? null,  // Business unit B
+};
 
-export async function POST(req) {
+// ── Branch descriptions (shown under name on card) ───────────────────────────
+const BRANCH_META = {
+  1:  { area: "Dubai",          address: "Dubai Investment Park" },
+  4:  { area: "Dubai",          address: "Jumeirah" },
+  5:  { area: "Dubai",          address: "JLT" },
+  9:  { area: "Dubai",          address: "Sports City" },
+  11: { area: "Dubai",          address: "Sustainable City" },
+  13: { area: "Dubai",          address: "Downtown Dubai" },
+};
+
+export async function GET() {
   try {
-    const body = await req.json();
-    const {
-      email, owner_name, owner_phone,
-      contact_id: existingContactId,
-      animal_id:  existingAnimalId,
-      new_pet,
-      appt_type_uid, resource_uid,
-      start_time, end_time, description,
-    } = body;
+    const token = await getAccessToken();
+    const base  = process.env.EZYVET_BASE_URL;
+    const auth  = { Authorization: `Bearer ${token}` };
 
-    const token   = await getAccessToken();
-    const base    = process.env.EZYVET_BASE_URL;
-    const cabBase = process.env.EZYVET_EZYCAB_BASE_URL;
-    const headers = {
-      Authorization:  `Bearer ${token}`,
-      "Content-Type": "application/json",
+    const [siteRes, apptRes, resRes, sepRes] = await Promise.all([
+      fetch(`${base}/v3/siteInformation`,                               { headers: auth }),
+      fetch(`${base}/v2/appointmenttype?active=1&limit=100`,            { headers: auth }),
+      fetch(`${base}/v2/resource?active=1&access=On+Calendar&limit=100`,{ headers: auth }),
+      fetch(`${base}/v1/separation?active=1&limit=50`,                  { headers: auth }),
+    ]);
+
+    const [siteData, apptData, resData, sepData] = await Promise.all([
+      siteRes.json(), apptRes.json(), resRes.json(), sepRes.json()
+    ]);
+
+    // Build separation map: id → { name, photo, meta }
+    const sepMap = {};
+    for (const i of sepData.items ?? []) {
+      const s = i.separation ?? i;
+      sepMap[s.id] = {
+        name:    s.name,
+        photo:   BRANCH_PHOTOS[s.id] ?? null,
+        area:    BRANCH_META[s.id]?.area    ?? "Dubai",
+        address: BRANCH_META[s.id]?.address ?? s.name,
+      };
+    }
+
+    const siteRaw = siteData.items?.[0]?.siteinformation ?? {};
+    const site = {
+      id:       siteRaw.id,
+      name:     siteRaw.name ?? "Noble Vet Clinics",
+      timezone: siteRaw.time_zone ?? "Asia/Dubai",
     };
 
-    let contact_id = existingContactId;
-    let animal_id  = existingAnimalId;
+    const appointmentTypes = (apptData.items ?? [])
+      .map(i => i.appointmenttype ?? i)
+      .filter(a => isBookable(a.name))
+      .map(a => ({
+        uid:               a.uid,
+        name:              a.name,
+        duration:          a.length ?? 30,
+        isConsultRequired: a.is_consult_required ?? true,
+      }));
 
-    // ── 1. Create contact if new ────────────────────────────────────────────
-    if (!contact_id) {
-      const [firstName, ...rest] = (owner_name ?? "").trim().split(" ");
-      const lastName = rest.join(" ") || "-";
-
-      const cRes = await fetch(`${base}/v2/contact`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          first_name: firstName,
-          last_name:  lastName,
-          email,
-          phone:      owner_phone ?? "",
-          active:     1,
-        }),
-      });
-      const cData = await cRes.json();
-      contact_id  = cData.items?.[0]?.contact?.id ?? cData.contact?.id;
-
-      if (!contact_id) {
-        console.error("[/api/book] contact creation failed", cData);
-        return NextResponse.json({ error: "Failed to create contact record" }, { status: 502 });
+    // Deduplicate separations and attach photo + meta
+    const seenSeps = new Set();
+    const separations = [];
+    for (const i of resData.items ?? []) {
+      const r = i.resource ?? i;
+      if (!r.ownership_id || seenSeps.has(r.ownership_id)) continue;
+      seenSeps.add(r.ownership_id);
+      const sep = sepMap[r.ownership_id];
+      if (sep) {
+        separations.push({
+          id:      r.ownership_id,
+          name:    sep.name,
+          photo:   sep.photo,
+          area:    sep.area,
+          address: sep.address,
+        });
       }
     }
 
-    // ── 2. Create animal if new ─────────────────────────────────────────────
-    if (!animal_id && new_pet) {
-      const aRes = await fetch(`${base}/v2/animal`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          name:       new_pet.name,
-          contact_id,
-          species:    new_pet.species ?? "Dog",
-          breed:      new_pet.breed   ?? "",
-          active:     1,
-        }),
-      });
-      const aData = await aRes.json();
-      animal_id   = aData.items?.[0]?.animal?.id ?? aData.animal?.id;
+    const resources = (resData.items ?? [])
+      .map(i => i.resource ?? i)
+      .map(r => ({
+        uid:            r.uid,
+        name:           r.name,
+        separationId:   r.ownership_id ?? null,
+        separationName: sepMap[r.ownership_id]?.name ?? "Main Clinic",
+        separationPhoto: BRANCH_PHOTOS[r.ownership_id] ?? null,
+        type:           r.type_name ?? "vet",
+      }));
 
-      if (!animal_id) {
-        console.error("[/api/book] animal creation failed", aData);
-        return NextResponse.json({ error: "Failed to create animal record" }, { status: 502 });
-      }
-    }
-
-    // ── 3. Create booking via /ezycab/booking ───────────────────────────────
-    const bookRes = await fetch(`${cabBase}/booking`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        appointment_type_uid: appt_type_uid,
-        resource_uid,
-        animal_id,
-        contact_id,
-        start_time,
-        end_time,
-        description: description ?? "Online booking via Noble Vet website",
-      }),
-    });
-
-    if (!bookRes.ok) {
-      const errBody = await bookRes.text();
-      console.error("[/api/book] booking failed:", bookRes.status, errBody);
-      return NextResponse.json(
-        { error: "Booking failed", detail: errBody },
-        { status: 502 }
-      );
-    }
-
-    const bookData = await bookRes.json();
-    const appt     = bookData.appointment ?? bookData.items?.[0]?.appointment;
-    const consult  = bookData.consult      ?? bookData.items?.[0]?.consult;
-
-    return NextResponse.json({
-      success:         true,
-      appointment_uid: appt?.uid,
-      consult_id:      consult?.id,
-      contact_id,
-      animal_id,
-      // Reference code shown to client
-      reference: `NVC-${(appt?.uid ?? Math.random().toString(36).slice(2,8)).slice(-6).toUpperCase()}`,
-    });
+    const response = NextResponse.json({ site, appointmentTypes, resources, separations });
+    response.headers.set("Access-Control-Allow-Origin", CORS);
+    response.headers.set("Cache-Control", "s-maxage=300, stale-while-revalidate=60");
+    return response;
 
   } catch (err) {
-    console.error("[/api/book]", err);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    console.error("[/api/startup]", err);
+    return NextResponse.json({ error: "Failed to load clinic configuration" }, { status: 500 });
   }
 }
 
-
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      "Access-Control-Allow-Origin":  CORS,
+      "Access-Control-Allow-Methods": "GET, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+    },
+  });
+}
