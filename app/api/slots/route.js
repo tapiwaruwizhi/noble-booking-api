@@ -29,6 +29,7 @@ export async function GET(req) {
 
     const token     = await getAccessToken();
     const ezyCABBase = process.env.EZYVET_EZYCAB_BASE_URL;
+     const base    = process.env.EZYVET_BASE_URL;
 
     const params = new URLSearchParams({
       "resources[]":                        resourceUid,
@@ -38,7 +39,7 @@ export async function GET(req) {
       "filter[slots.appointmentType.id][in]": apptTypeUid,
     });
 
-    const res  = await fetch(`${ezyCABBase}/availability?${params}`, {
+    const res  = await fetch(`${base}/availability?${params}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
