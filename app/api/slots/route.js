@@ -39,7 +39,7 @@ export async function GET(req) {
       "filter[slots.appointmentType.id][in]": apptTypeUid,
     });
 
-    const res  = await fetch(`${base}/availability?${params}`, {
+    const res  = await fetch(`${ezyCABBase}/ezycab/availability?${params}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
