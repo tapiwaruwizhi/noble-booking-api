@@ -11,8 +11,7 @@ import { getAccessToken } from "../../../lib/ezyvet/auth";
 const CORS = process.env.ALLOWED_ORIGIN ?? "*";
 
 // Booking-specific base URL (ezyCAB endpoints: /availability, /booking)
-const BOOKING_BASE_URL = process.env.EZYVET_BOOKING_BASE_URL ?? "https://apiv2.trial.ezyvet.com";
-
+const BOOKING_BASE_URL = process.env.EZYVET_EZYCAB_BASE_URL ?? "https://apiv2.trial.ezyvet.com";
 export async function GET(req) {
   try {
     const { searchParams } = new URL(req.url);
@@ -38,7 +37,7 @@ export async function GET(req) {
       "filter[slots.appointmentType.id][in]": apptTypeUid,
     });
 
-    const res = await fetch(`${BOOKING_BASE_URL}/availability?${params}`, {
+    const res = await fetch(`${BOOKING_BASE_URL}/ezycab/availability?${params}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
