@@ -118,7 +118,8 @@ export async function GET() {
       .map((a) => ({
         uid:               a.uid,
         name:              a.name,
-        duration:          a.length ?? 30,
+        // duration:          a.length ?? 30,
+        duration:          15,
         isConsultRequired: a.is_consult_required ?? true,
       }));
 
