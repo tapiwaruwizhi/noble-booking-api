@@ -18,7 +18,7 @@ export async function GET(req) {
     const date          = searchParams.get("date");           // YYYY-MM-DD
     const apptTypeUid   = searchParams.get("appt_type_uid");  // appointmentType_xxx
     const resourceUid   = searchParams.get("resource_uid");   // resource_xxx
-    const duration      = searchParams.get("duration") ?? "30";
+    const duration      = searchParams.get("duration") ?? "15";
 
     if (!date || !apptTypeUid || !resourceUid) {
       return NextResponse.json(
