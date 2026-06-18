@@ -35,7 +35,7 @@ export async function GET(req) {
     const params = new URLSearchParams({
       "resources[]":                        resourceUid,
       "dates[]":                            date,
-      duration,
+      "duration":duration,
       "filter[slots.available][eq]":        "true",
       "filter[slots.appointmentType.id][in]": apptTypeUid,
     });
