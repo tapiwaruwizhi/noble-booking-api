@@ -85,6 +85,7 @@ export async function GET(req) {
       const dob = a.date_of_birth ? new Date(a.date_of_birth * 1000) : null;
       return {
         id:      a.id,
+        uid:     a.uid,
         name:    a.name,
         species: a.species_name,
         breed:   a.breed_name,
@@ -102,6 +103,7 @@ export async function GET(req) {
       found: true,
       contact: {
         id:         contact.id,
+        uid:        contact.uid,
         first_name: contact.first_name,
         last_name:  contact.last_name,
         email:      email_address,
