@@ -1,19 +1,5 @@
 // src/app/api/book/route.js
-// POST /api/book
-//
-// Creates contact (if new) → animal (if new) → booking via /ezycab/booking
-// Request body shape per ezyVet docs (developers.ezyvet.com/#create-booking):
-// {
-//   startTime:           ISO 8601 string  e.g. "2025-07-14T09:30:00.000-04:00"
-//   type:                appointmentType UID
-//   durationMinutes:     number (minutes)
-//   appointmentStatus:   "unconfirmed" | "confirmed" | "cancelled"
-//   description:         string (optional)
-//   animal:              animal UID
-//   contact:             contact UID
-//   provider:            resource UID
-//   additionalResources: [resource UID, ...]  (optional)
-// }
+// POST /api/book — with detailed logging on each step for debugging
 
 import { NextResponse } from "next/server";
 import { getAccessToken } from "../../../lib/ezyvet/auth";
@@ -23,6 +9,7 @@ const BOOKING_BASE = process.env.EZYVET_EZYCAB_BASE_URL ?? "https://apiv2.trial.
 
 export async function POST(req) {
   try {
+    const body = await req.json();
     const {
       email, owner_name, owner_phone,
       contact_id:  existingContactId,
@@ -32,100 +19,189 @@ export async function POST(req) {
       new_pet,
       appt_type_uid,
       resource_uid,
-      start_time,      // Unix timestamp (seconds) from slots route
-      start_iso,       // ISO string from slots route — preferred for booking
+      start_time,
+      start_iso,
       end_time,
-      duration,        // minutes — fallback to compute duration
+      duration,
       description,
-    } = await req.json();
+    } = body;
 
-    const token     = await getAccessToken();
-    const base      = process.env.EZYVET_BASE_URL;
-    const authJson  = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
+    console.log("═══════════════════════════════════════");
+    console.log("[/api/book] STEP 0 — incoming payload:");
+    console.log(JSON.stringify({
+      email, owner_name, owner_phone,
+      existingContactId, existingContactUid,
+      existingAnimalId, existingAnimalUid,
+      new_pet, appt_type_uid, resource_uid,
+      start_time, start_iso, end_time, duration, description,
+    }, null, 2));
+
+    const token    = await getAccessToken();
+    const base     = process.env.EZYVET_BASE_URL;
+    const authJson = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
+
+    console.log("[/api/book] Token obtained ✓");
+    console.log("[/api/book] EZYVET_BASE_URL:", base);
+    console.log("[/api/book] BOOKING_BASE:", BOOKING_BASE);
 
     let contact_id  = existingContactId;
     let contact_uid = existingContactUid;
     let animal_id   = existingAnimalId;
     let animal_uid  = existingAnimalUid;
 
-    // ── 1. Create contact if new ─────────────────────────────────────────────
+    // ── STEP 1: Create contact if new ────────────────────────────────────────
     if (!contact_id && !contact_uid) {
+      console.log("─────────────────────────────────────────");
+      console.log("[/api/book] STEP 1 — creating new contact...");
       const [first, ...rest] = (owner_name ?? "").trim().split(" ");
+      const contactPayload = {
+        first_name: first,
+        last_name:  rest.join(" ") || "-",
+        email,
+        phone:      owner_phone ?? "",
+        active:     1,
+      };
+      console.log("[/api/book] Contact payload:", JSON.stringify(contactPayload));
+
       const cRes  = await fetch(`${base}/v2/contact`, {
         method: "POST", headers: authJson,
-        body: JSON.stringify({
-          first_name: first,
-          last_name:  rest.join(" ") || "-",
-          email,
-          phone:      owner_phone ?? "",
-          active:     1,
-        }),
+        body: JSON.stringify(contactPayload),
       });
-      const cData = await cRes.json();
+      const cText = await cRes.text();
+      console.log("[/api/book] Contact response status:", cRes.status);
+      console.log("[/api/book] Contact response body:", cText);
+
+      if (!cRes.ok) {
+        return NextResponse.json({
+          error:  "Failed to create contact",
+          step:   "create_contact",
+          status: cRes.status,
+          detail: cText,
+        }, { status: 502 });
+      }
+
+      const cData = JSON.parse(cText);
       const c     = cData.items?.[0]?.contact ?? cData.contact;
       contact_id  = c?.id;
       contact_uid = c?.uid;
+      console.log("[/api/book] Contact created — id:", contact_id, "uid:", contact_uid);
+
       if (!contact_uid && !contact_id) {
-        console.error("[/api/book] contact creation failed", cData);
-        return NextResponse.json({ error: "Failed to create contact" }, { status: 502 });
+        return NextResponse.json({
+          error:  "Contact created but no ID returned",
+          step:   "create_contact",
+          detail: cData,
+        }, { status: 502 });
       }
+    } else {
+      console.log("[/api/book] STEP 1 — using existing contact id:", contact_id, "uid:", contact_uid);
     }
 
-    // ── 2. Create animal if new ──────────────────────────────────────────────
+    // ── STEP 2: Create animal if new ─────────────────────────────────────────
     if (!animal_id && !animal_uid && new_pet) {
+      console.log("─────────────────────────────────────────");
+      console.log("[/api/book] STEP 2 — creating new animal...");
+      const animalPayload = {
+        name:       new_pet.name,
+        contact_id: contact_id,
+        species:    new_pet.species ?? "Dog",
+        breed:      new_pet.breed   ?? "",
+        active:     1,
+      };
+      console.log("[/api/book] Animal payload:", JSON.stringify(animalPayload));
+
       const aRes  = await fetch(`${base}/v2/animal`, {
         method: "POST", headers: authJson,
-        body: JSON.stringify({
-          name:       new_pet.name,
-          contact_id: contact_id,
-          species:    new_pet.species ?? "Dog",
-          breed:      new_pet.breed   ?? "",
-          active:     1,
-        }),
+        body: JSON.stringify(animalPayload),
       });
-      const aData = await aRes.json();
+      const aText = await aRes.text();
+      console.log("[/api/book] Animal response status:", aRes.status);
+      console.log("[/api/book] Animal response body:", aText);
+
+      if (!aRes.ok) {
+        return NextResponse.json({
+          error:  "Failed to create animal",
+          step:   "create_animal",
+          status: aRes.status,
+          detail: aText,
+        }, { status: 502 });
+      }
+
+      const aData = JSON.parse(aText);
       const a     = aData.items?.[0]?.animal ?? aData.animal;
       animal_id   = a?.id;
       animal_uid  = a?.uid;
+      console.log("[/api/book] Animal created — id:", animal_id, "uid:", animal_uid);
+
       if (!animal_uid && !animal_id) {
-        console.error("[/api/book] animal creation failed", aData);
-        return NextResponse.json({ error: "Failed to create animal" }, { status: 502 });
+        return NextResponse.json({
+          error:  "Animal created but no ID returned",
+          step:   "create_animal",
+          detail: aData,
+        }, { status: 502 });
       }
+    } else {
+      console.log("[/api/book] STEP 2 — using existing animal id:", animal_id, "uid:", animal_uid);
     }
 
-    // ── 3. Build startTime ISO string ────────────────────────────────────────
-    // Prefer start_iso (already ISO from the slots route),
-    // fall back to converting Unix timestamp
+    // ── STEP 3: Build startTime ───────────────────────────────────────────────
+    console.log("─────────────────────────────────────────");
+    console.log("[/api/book] STEP 3 — building startTime...");
     const startTimeISO = start_iso
       ?? (start_time ? new Date(start_time * 1000).toISOString() : null);
+    console.log("[/api/book] start_iso:", start_iso);
+    console.log("[/api/book] start_time:", start_time);
+    console.log("[/api/book] startTimeISO resolved to:", startTimeISO);
 
     if (!startTimeISO) {
-      return NextResponse.json({ error: "start_time or start_iso is required" }, { status: 400 });
+      return NextResponse.json({
+        error: "start_time or start_iso is required",
+        step:  "build_start_time",
+      }, { status: 400 });
     }
 
-    // ── 4. Compute durationMinutes ───────────────────────────────────────────
     let durationMinutes = duration ?? 30;
     if (!duration && start_time && end_time) {
       durationMinutes = Math.round((end_time - start_time) / 60);
     }
+    console.log("[/api/book] durationMinutes:", durationMinutes);
 
-    // ── 5. Resolve identifiers — /ezycab/booking needs UIDs not numeric IDs ──
-    // If we only have numeric ID, look up the UID
+    // ── STEP 4: Resolve UIDs if only numeric IDs available ───────────────────
+    console.log("─────────────────────────────────────────");
+    console.log("[/api/book] STEP 4 — resolving UIDs...");
+
     if (!contact_uid && contact_id) {
+      console.log("[/api/book] Looking up contact UID for id:", contact_id);
       const cRes  = await fetch(`${base}/v2/contact?id=${contact_id}&limit=1`, { headers: authJson });
-      const cData = await cRes.json();
+      const cText = await cRes.text();
+      console.log("[/api/book] Contact lookup status:", cRes.status);
+      console.log("[/api/book] Contact lookup body:", cText);
+      const cData = JSON.parse(cText);
       contact_uid = cData.items?.[0]?.contact?.uid;
+      console.log("[/api/book] Resolved contact_uid:", contact_uid);
     }
+
     if (!animal_uid && animal_id) {
+      console.log("[/api/book] Looking up animal UID for id:", animal_id);
       const aRes  = await fetch(`${base}/v2/animal?id=${animal_id}&limit=1`, { headers: authJson });
-      const aData = await aRes.json();
+      const aText = await aRes.text();
+      console.log("[/api/book] Animal lookup status:", aRes.status);
+      console.log("[/api/book] Animal lookup body:", aText);
+      const aData = JSON.parse(aText);
       animal_uid  = aData.items?.[0]?.animal?.uid;
+      console.log("[/api/book] Resolved animal_uid:", animal_uid);
     }
 
-    if (!contact_uid) return NextResponse.json({ error: "Could not resolve contact UID" }, { status: 502 });
-    if (!animal_uid)  return NextResponse.json({ error: "Could not resolve animal UID"  }, { status: 502 });
+    if (!contact_uid) {
+      return NextResponse.json({ error: "Could not resolve contact UID", step: "resolve_uids" }, { status: 502 });
+    }
+    if (!animal_uid) {
+      return NextResponse.json({ error: "Could not resolve animal UID", step: "resolve_uids" }, { status: 502 });
+    }
 
-    // ── 6. POST /ezycab/booking ──────────────────────────────────────────────
+    // ── STEP 5: POST /ezycab/booking ─────────────────────────────────────────
+    console.log("─────────────────────────────────────────");
+    console.log("[/api/book] STEP 5 — posting booking...");
     const bookPayload = {
       startTime:           startTimeISO,
       type:                appt_type_uid,
@@ -138,23 +214,33 @@ export async function POST(req) {
       additionalResources: [resource_uid],
     };
 
-    console.log("[/api/book] payload:", JSON.stringify(bookPayload));
+    console.log("[/api/book] Booking URL:", `${BOOKING_BASE}/ezycab/booking`);
+    console.log("[/api/book] Booking payload:", JSON.stringify(bookPayload, null, 2));
 
-    const bookRes = await fetch(`${BOOKING_BASE}/ezycab/booking`, {
+    const bookRes  = await fetch(`${BOOKING_BASE}/ezycab/booking`, {
       method: "POST", headers: authJson,
       body: JSON.stringify(bookPayload),
     });
-
     const bookText = await bookRes.text();
+    console.log("[/api/book] Booking response status:", bookRes.status);
+    console.log("[/api/book] Booking response body:", bookText);
+
     if (!bookRes.ok) {
-      console.error("[/api/book] booking failed:", bookRes.status, bookText);
-      return NextResponse.json({ error: "Booking failed", detail: bookText }, { status: 502 });
+      return NextResponse.json({
+        error:  "Booking failed",
+        step:   "create_booking",
+        status: bookRes.status,
+        detail: bookText,
+      }, { status: 502 });
     }
 
     const bookData = JSON.parse(bookText);
     const appt     = bookData.data?.[0] ?? bookData.appointment ?? bookData;
     const apptId   = appt?.id ?? appt?.uid;
     const ref      = `NVC-${(apptId ?? Math.random().toString(36).slice(2)).slice(-6).toUpperCase()}`;
+
+    console.log("[/api/book] ✓ Booking successful — ref:", ref, "apptId:", apptId);
+    console.log("═══════════════════════════════════════");
 
     const r = NextResponse.json({
       success:         true,
@@ -167,8 +253,8 @@ export async function POST(req) {
     return r;
 
   } catch (err) {
-    console.error("[/api/book]", err);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    console.error("[/api/book] UNCAUGHT ERROR:", err);
+    return NextResponse.json({ error: "Internal server error", detail: err.message }, { status: 500 });
   }
 }
 
