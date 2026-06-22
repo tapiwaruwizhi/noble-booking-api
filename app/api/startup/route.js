@@ -1,7 +1,9 @@
 // src/app/api/startup/route.js
 // GET /api/startup
 // Fetches site info, appointment types, resources and separations.
-// Branch photos pulled directly from noblevetclinic.com Framer CDN.
+// Branch photos from noblevetclinic.com Framer CDN.
+// ezyVet separation names are kept as-is.
+// displayName = "Real Branch (ezyVet name)" e.g. "Jumeirah (Department A)"
 
 import { NextResponse } from "next/server";
 import { getAccessToken } from "@/lib/ezyvet/auth";
@@ -17,60 +19,78 @@ const isBookable = (name = "") =>
   !NON_BOOKABLE.some((kw) => name.toLowerCase().includes(kw));
 
 // ── Branch map keyed by separation ID ────────────────────────────────────────
-// Covers both sandbox IDs and production IDs.
-// Update separation IDs when switching from sandbox to production.
-// Photos sourced directly from noblevetclinic.com (Framer CDN — no upload needed).
+// realName = Noble Vet's public branch name (shown in UI prefix)
+// ezyVet separation name is kept and shown in brackets after e.g. "(Department A)"
 const BRANCH_MAP = {
-  // ── Sandbox IDs (mapped to real Noble Vet branches for testing) ───────────
   1:  {
-    name:    "Dubai Investment Park (DIP)",
-    photo:   "https://framerusercontent.com/images/q3jxUlzjD51IaA8fkPDpE8TdGI.webp?width=800",
-    address: "Retail #5, Al Merdas Building, Green Community, DIP 1",
-    hours:   "8am – 9pm daily",
+    realName: "Dubai Investment Park (DIP)",
+    photo:    "https://framerusercontent.com/images/q3jxUlzjD51IaA8fkPDpE8TdGI.webp?width=800",
+    address:  "Retail #5, Al Merdas Building, Green Community, DIP 1",
+    hours:    "8am – 9pm daily",
   },
   4:  {
-    name:    "Jumeirah",
-    photo:   "https://framerusercontent.com/images/lqrR41VkWauKj02z17JplcKOs.webp?width=800",
-    address: "Villa 63 Umm Al Sheif St, Jumeirah 3, Dubai",
-    hours:   "Mon–Fri 8am–8pm · Sat–Sun 9am–6pm",
+    realName: "Jumeirah",
+    photo:    "https://framerusercontent.com/images/lqrR41VkWauKj02z17JplcKOs.webp?width=800",
+    address:  "Villa 63 Umm Al Sheif St, Jumeirah 3, Dubai",
+    hours:    "Mon–Fri 8am–8pm · Sat–Sun 9am–6pm",
   },
   5:  {
-    name:    "Jumeirah Lake Towers (JLT)",
-    photo:   "https://framerusercontent.com/images/hPLBXv621QKLaSk5kWzR88tvB9k.webp?width=800",
-    address: "Retail R3A, Lake Point Tower, Cluster N, JLT",
-    hours:   "10am – 7pm daily",
+    realName: "Jumeirah Lake Towers (JLT)",
+    photo:    "https://framerusercontent.com/images/hPLBXv621QKLaSk5kWzR88tvB9k.webp?width=800",
+    address:  "Retail R3A, Lake Point Tower, Cluster N, JLT",
+    hours:    "10am – 7pm daily",
   },
   9:  {
-    name:    "Sports City",
-    photo:   "https://framerusercontent.com/images/TV5pz7Ult5uD58sxDq18jVWDDI.webp?width=800",
-    address: "Shop 1, Canal Residence West, Dubai Sports City",
-    hours:   "Call for hours",
+    realName: "Sports City",
+    photo:    "https://framerusercontent.com/images/TV5pz7Ult5uD58sxDq18jVWDDI.webp?width=800",
+    address:  "Shop 1, Canal Residence West, Dubai Sports City",
+    hours:    "Call for hours",
   },
   11: {
-    name:    "Sustainable City",
-    photo:   "https://framerusercontent.com/images/Om0XtUe6bUMiRMKb0bfUkXGPjCo.webp?width=800",
-    address: "Sustainable City Plaza, Off Al Qudra Rd, Dubailand",
-    hours:   "Call for hours",
+    realName: "Sustainable City",
+    photo:    "https://framerusercontent.com/images/Om0XtUe6bUMiRMKb0bfUkXGPjCo.webp?width=800",
+    address:  "Sustainable City Plaza, Off Al Qudra Rd, Dubailand",
+    hours:    "Call for hours",
   },
   13: {
-    name:    "Dubai Investment Park (DIP)",
-    photo:   "https://framerusercontent.com/images/q3jxUlzjD51IaA8fkPDpE8TdGI.webp?width=800",
-    address: "Retail #5, Al Merdas Building, Green Community, DIP 1",
-    hours:   "8am – 9pm daily",
+    realName: "Dubai Investment Park (DIP)",
+    photo:    "https://framerusercontent.com/images/q3jxUlzjD51IaA8fkPDpE8TdGI.webp?width=800",
+    address:  "Retail #5, Al Merdas Building, Green Community, DIP 1",
+    hours:    "8am – 9pm daily",
   },
-  // ── Add production separation IDs here when going live ────────────────────
-  // e.g. 42: { name: "Jumeirah", photo: "...", address: "...", hours: "..." },
+  // Add production separation IDs here when going live
 };
 
 const FALLBACK_BRANCH = {
-  name:    "Noble Vet Clinics",
-  photo:   "https://framerusercontent.com/images/04p16NKQdQElKK3AUH9nMUopoI4.jpg",
-  address: "Dubai, UAE",
-  hours:   "Call +971 600 566 253",
+  realName: null,
+  photo:    "https://framerusercontent.com/images/04p16NKQdQElKK3AUH9nMUopoI4.jpg",
+  address:  "Dubai, UAE",
+  hours:    "Call +971 600 566 253",
 };
- 
+
 function getBranch(id) {
   return BRANCH_MAP[id] ?? FALLBACK_BRANCH;
+}
+
+// Format display name: "Jumeirah (Department A)" or just ezyVet name if no mapping
+function getDisplayName(realName, ezyvetName) {
+  if (!realName) return ezyvetName;
+  if (realName === ezyvetName) return realName;
+  return `${realName} (${ezyvetName})`;
+}
+
+const VET_PHOTOS = {
+  "dr. lidija krvavac":     "https://framerusercontent.com/assets/N2wbokBOHicxdBZjOvaeeEslew.jpg",
+};
+
+function getVetPhoto(name = "") {
+  const key = name.toLowerCase().trim();
+  if (VET_PHOTOS[key]) return VET_PHOTOS[key];
+  for (const [k, url] of Object.entries(VET_PHOTOS)) {
+    const lastName = k.split(" ").slice(-1)[0];
+    if (key.includes(lastName)) return url;
+  }
+  return null;
 }
 
 export async function GET() {
@@ -99,15 +119,19 @@ export async function GET() {
     };
 
     // ── Separation map ────────────────────────────────────────────────────────
+    // Keeps ezyVet name, adds realName and displayName
     const sepMap = {};
     for (const i of sepData.items ?? []) {
       const s      = i.separation ?? i;
       const branch = getBranch(s.id);
+      const ezyvetName = s.name;
       sepMap[s.id] = {
-        name:    branch.name,    // override sandbox name with real branch name
-        photo:   branch.photo,
-        address: branch.address,
-        hours:   branch.hours,
+        ezyvetName,
+        realName:    branch.realName,
+        displayName: getDisplayName(branch.realName, ezyvetName),
+        photo:       branch.photo,
+        address:     branch.address,
+        hours:       branch.hours,
       };
     }
 
@@ -118,7 +142,6 @@ export async function GET() {
       .map((a) => ({
         uid:               a.uid,
         name:              a.name,
-        // duration:          a.length ?? 30,
         duration:          15,
         isConsultRequired: a.is_consult_required ?? true,
       }));
@@ -129,14 +152,17 @@ export async function GET() {
       .map((r) => {
         const sep = sepMap[r.ownership_id] ?? {};
         return {
-          uid:             r.uid,
-          name:            r.name,
-          separationId:    r.ownership_id ?? null,
-          separationName:  sep.name  ?? "Main Clinic",
-          separationPhoto: sep.photo ?? FALLBACK_BRANCH.photo,
-          separationAddress: sep.address ?? "Dubai, UAE",
-          separationHours:   sep.hours   ?? "Call for hours",
-          type:            r.type_name ?? "vet",
+          uid:                r.uid,
+          name:               r.name,
+          photo:              getVetPhoto(r.name),
+          separationId:       r.ownership_id ?? null,
+          separationName:     sep.displayName ?? sep.ezyvetName ?? "Main Clinic",
+          separationEzyName:  sep.ezyvetName  ?? "Main Clinic",
+          separationRealName: sep.realName    ?? null,
+          separationPhoto:    sep.photo       ?? FALLBACK_BRANCH.photo,
+          separationAddress:  sep.address     ?? "Dubai, UAE",
+          separationHours:    sep.hours       ?? "Call for hours",
+          type:               r.type_name     ?? "vet",
         };
       });
 
@@ -150,31 +176,25 @@ export async function GET() {
       const sep = sepMap[r.ownership_id];
       if (sep) {
         separations.push({
-          id:      r.ownership_id,
-          name:    sep.name,
-          photo:   sep.photo,
-          address: sep.address,
-          hours:   sep.hours,
+          id:          r.ownership_id,
+          name:        sep.displayName,   // "Jumeirah (Department A)"
+          ezyvetName:  sep.ezyvetName,    // "Department A"
+          realName:    sep.realName,      // "Jumeirah"
+          photo:       sep.photo,
+          address:     sep.address,
+          hours:       sep.hours,
         });
       }
     }
 
-    const response = NextResponse.json({
-      site,
-      appointmentTypes,
-      resources,
-      separations,
-    });
+    const response = NextResponse.json({ site, appointmentTypes, resources, separations });
     response.headers.set("Access-Control-Allow-Origin", CORS);
     response.headers.set("Cache-Control", "s-maxage=300, stale-while-revalidate=60");
     return response;
 
   } catch (err) {
     console.error("[/api/startup]", err);
-    return NextResponse.json(
-      { error: "Failed to load clinic configuration" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to load clinic configuration" }, { status: 500 });
   }
 }
 
