@@ -55,26 +55,21 @@ export async function POST(req) {
       console.log("[/api/book] STEP 1 — creating new contact...");
       const [first, ...rest] = (owner_name ?? "").trim().split(" ");
       const contactPayload = {
-        first_name:   first,
-        last_name:    rest.join(" ") || "-",
-        is_customer:  true,
-        is_business:  false,
-        is_supplier:  false,
-        is_vet:       false,
+        first_name:  first,
+        last_name:   rest.join(" ") || "-",
+        is_customer: 1,
         contact_detail_list: [
-          // Email
           ...(email ? [{
-            name:                  "Email",
-            value:                 email,
-            contact_detail_type_id: "1", // type_id 1 = email
-            preferred:             1,
+            name:                   "Email",
+            value:                  email,
+            contact_detail_type_id: "1",
+            preferred:              1,
           }] : []),
-          // Phone
           ...(owner_phone ? [{
-            name:                  "Mobile",
-            value:                 owner_phone,
-            contact_detail_type_id: "3", // type_id 3 = phone
-            preferred:             0,
+            name:                   "Mobile",
+            value:                  owner_phone,
+            contact_detail_type_id: "3",
+            preferred:              0,
           }] : []),
         ],
       };
