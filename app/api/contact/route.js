@@ -50,11 +50,14 @@ export async function GET(req) {
     console.log("[/api/contact] contactdetail items found:", details.length);
 
     // Filter to correct type_id and exact value match
-    const expectedTypeId = email ? EMAIL_TYPE : PHONE_TYPE;
+    // NOTE: v1 contactdetail uses "contact_detail_type_id" not "type_id"
+    const expectedTypeId = email ? String(EMAIL_TYPE) : String(PHONE_TYPE);
     const match = details.find(i => {
       const d = i.contactdetail ?? i;
-      console.log("[/api/contact] checking detail — type_id:", d.type_id, "value:", d.value, "contact_id:", d.contact_id);
-      if (d.type_id !== expectedTypeId) return false;
+      const typeId = String(d.contact_detail_type_id ?? d.type_id ?? "");
+      const cid    = d.contact_id ?? d.contactId;
+      console.log("[/api/contact] checking detail — contact_detail_type_id:", typeId, "value:", d.value, "contact_id:", cid);
+      if (typeId !== expectedTypeId) return false;
       if (email) return d.value?.trim().toLowerCase() === email;
       if (phone) return normalizePhone(d.value) === normalizePhone(phone);
       return false;
@@ -62,7 +65,7 @@ export async function GET(req) {
 
     if (match) {
       const d = match.contactdetail ?? match;
-      contactId = d.contact_id;
+      contactId = d.contact_id ?? d.contactId;
       console.log("[/api/contact] ✓ Match found — contact_id:", contactId);
     } else {
       console.log("[/api/contact] ✗ No match in contactdetail results");
@@ -86,10 +89,11 @@ export async function GET(req) {
         if (items.length === 0) break;
         for (const i of items) {
           const c = i.contact ?? i;
-          const found = (c.contact_detail_list ?? []).some(
-            d => d.type_id === PHONE_TYPE &&
-                 normalizePhone(d.value) === normalizePhone(phone)
-          );
+          const found = (c.contact_detail_list ?? []).some(d => {
+            const typeId = Number(d.contact_detail_type_id ?? d.type_id ?? 0);
+            return typeId === PHONE_TYPE &&
+                   normalizePhone(d.value) === normalizePhone(phone);
+          });
           if (found) {
             contactId = c.id;
             console.log("[/api/contact] ✓ Phone match found on page", page, "— contact_id:", contactId);
@@ -167,8 +171,10 @@ export async function GET(req) {
     console.log("[/api/contact] ✓ Animals found:", animals.length);
 
     const detailList    = contact.contact_detail_list ?? [];
-    const email_address = detailList.find(d => d.type_id === EMAIL_TYPE)?.value ?? email ?? "";
-    const phone_number  = detailList.find(d => d.type_id === PHONE_TYPE)?.value ?? phone ?? "";
+    // v1 uses contact_detail_type_id, v2 uses type_id — handle both
+    const getTypeId     = (d) => Number(d.contact_detail_type_id ?? d.type_id ?? 0);
+    const email_address = detailList.find(d => getTypeId(d) === EMAIL_TYPE)?.value ?? email ?? "";
+    const phone_number  = detailList.find(d => getTypeId(d) === PHONE_TYPE)?.value ?? phone ?? "";
 
     console.log("[/api/contact] ✓ Returning found: true");
     console.log("═══════════════════════════════════════");
