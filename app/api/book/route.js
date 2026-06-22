@@ -52,58 +52,92 @@ export async function POST(req) {
     // ── STEP 1: Create contact if new ────────────────────────────────────────
     if (!contact_id && !contact_uid) {
       console.log("─────────────────────────────────────────");
-      console.log("[/api/book] STEP 1 — creating new contact...");
-      const [first, ...rest] = (owner_name ?? "").trim().split(" ");
-      const contactPayload = {
-        first_name:  first,
-        last_name:   rest.join(" ") || "-",
-        is_customer: 1,
-        contact_detail_list: [
-          ...(email ? [{
-            name:                   "Email",
-            value:                  email,
-            contact_detail_type_id: "1",
-            preferred:              1,
-          }] : []),
-          ...(owner_phone ? [{
-            name:                   "Mobile",
-            value:                  owner_phone,
-            contact_detail_type_id: "3",
-            preferred:              0,
-          }] : []),
-        ],
-      };
-      console.log("[/api/book] Contact payload:", JSON.stringify(contactPayload));
+      console.log("[/api/book] STEP 1 — checking if contact already exists...");
 
-      const cRes  = await fetch(`${base}/v1/contact`, {
-        method: "POST", headers: authJson,
-        body: JSON.stringify(contactPayload),
+      // Check by email first, then phone — prevent duplicate contacts
+      const lookupParam = email
+        ? `email=${encodeURIComponent(email)}&phone=`
+        : `phone=${encodeURIComponent(owner_phone ?? "")}&email=`;
+
+      const checkRes  = await fetch(`${base}/v1/contact?active=1&limit=200`, { headers: authJson });
+      const checkData = await checkRes.json();
+      const allContacts = checkData.items ?? [];
+
+      const EMAIL_TYPE = 1;
+      const PHONE_TYPE = 3;
+      const normalizePhone = (v = "") => v.replace(/[\s\-().+]/g, "");
+
+      const existingContact = allContacts.find(i => {
+        const c       = i.contact ?? i;
+        const details = c.contact_detail_list ?? [];
+        if (email) {
+          return details.some(d => d.type_id === EMAIL_TYPE && d.value?.toLowerCase() === email.toLowerCase());
+        }
+        if (owner_phone) {
+          return details.some(d => d.type_id === PHONE_TYPE && normalizePhone(d.value) === normalizePhone(owner_phone));
+        }
+        return false;
       });
-      const cText = await cRes.text();
-      console.log("[/api/book] Contact response status:", cRes.status);
-      console.log("[/api/book] Contact response body:", cText);
 
-      if (!cRes.ok) {
-        return NextResponse.json({
-          error:  "Failed to create contact",
-          step:   "create_contact",
-          status: cRes.status,
-          detail: cText,
-        }, { status: 502 });
-      }
+      if (existingContact) {
+        const c = existingContact.contact ?? existingContact;
+        contact_id  = c.id;
+        contact_uid = c.uid;
+        console.log("[/api/book] Found existing contact — id:", contact_id, "uid:", contact_uid);
+      } else {
+        console.log("[/api/book] No existing contact found — creating new one...");
+        const [first, ...rest] = (owner_name ?? "").trim().split(" ");
+        const contactPayload = {
+          first_name:  first,
+          last_name:   rest.join(" ") || "-",
+          is_customer: 1,
+          contact_detail_list: [
+            ...(email ? [{
+              name:                   "Email",
+              value:                  email,
+              contact_detail_type_id: "1",
+              preferred:              1,
+            }] : []),
+            ...(owner_phone ? [{
+              name:                   "Mobile",
+              value:                  owner_phone,
+              contact_detail_type_id: "3",
+              preferred:              0,
+            }] : []),
+          ],
+        };
+        console.log("[/api/book] Contact payload:", JSON.stringify(contactPayload));
 
-      const cData = JSON.parse(cText);
-      const c     = cData.items?.[0]?.contact ?? cData.contact;
-      contact_id  = c?.id;
-      contact_uid = c?.uid;
-      console.log("[/api/book] Contact created — id:", contact_id, "uid:", contact_uid);
+        const cRes  = await fetch(`${base}/v1/contact`, {
+          method: "POST", headers: authJson,
+          body: JSON.stringify(contactPayload),
+        });
+        const cText = await cRes.text();
+        console.log("[/api/book] Contact response status:", cRes.status);
+        console.log("[/api/book] Contact response body:", cText);
 
-      if (!contact_uid && !contact_id) {
-        return NextResponse.json({
-          error:  "Contact created but no ID returned",
-          step:   "create_contact",
-          detail: cData,
-        }, { status: 502 });
+        if (!cRes.ok) {
+          return NextResponse.json({
+            error:  "Failed to create contact",
+            step:   "create_contact",
+            status: cRes.status,
+            detail: cText,
+          }, { status: 502 });
+        }
+
+        const cData = JSON.parse(cText);
+        const c     = cData.items?.[0]?.contact ?? cData.contact;
+        contact_id  = c?.id;
+        contact_uid = c?.uid;
+        console.log("[/api/book] Contact created — id:", contact_id, "uid:", contact_uid);
+
+        if (!contact_uid && !contact_id) {
+          return NextResponse.json({
+            error:  "Contact created but no ID returned",
+            step:   "create_contact",
+            detail: cData,
+          }, { status: 502 });
+        }
       }
     } else {
       console.log("[/api/book] STEP 1 — using existing contact id:", contact_id, "uid:", contact_uid);
