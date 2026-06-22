@@ -52,39 +52,38 @@ export async function POST(req) {
     // ── STEP 1: Create contact if new ────────────────────────────────────────
     if (!contact_id && !contact_uid) {
       console.log("─────────────────────────────────────────");
-      console.log("[/api/book] STEP 1 — checking if contact already exists...");
+      console.log("[/api/book] STEP 1 — checking for existing contact...");
 
-      // Check by email first, then phone — prevent duplicate contacts
-      const lookupParam = email
-        ? `email=${encodeURIComponent(email)}&phone=`
-        : `phone=${encodeURIComponent(owner_phone ?? "")}&email=`;
-
-      const checkRes  = await fetch(`${base}/v1/contact?active=1&limit=200`, { headers: authJson });
-      const checkData = await checkRes.json();
-      const allContacts = checkData.items ?? [];
-
-      const EMAIL_TYPE = 1;
-      const PHONE_TYPE = 3;
-      const normalizePhone = (v = "") => v.replace(/[\s\-().+]/g, "");
-
-      const existingContact = allContacts.find(i => {
-        const c       = i.contact ?? i;
-        const details = c.contact_detail_list ?? [];
-        if (email) {
-          return details.some(d => d.type_id === EMAIL_TYPE && d.value?.toLowerCase() === email.toLowerCase());
+      // Search contactdetail directly by email or phone value
+      const searchValue = email || owner_phone;
+      if (searchValue) {
+        const cdRes  = await fetch(
+          `${base}/v1/contactdetail?active=1&value=${encodeURIComponent(searchValue)}&limit=5`,
+          { headers: authJson }
+        );
+        const cdData = await cdRes.json();
+        const EMAIL_TYPE = 1;
+        const PHONE_TYPE = 3;
+        const expectedType = email ? EMAIL_TYPE : PHONE_TYPE;
+        const match = (cdData.items ?? []).find(i => {
+          const d = i.contactdetail ?? i;
+          return d.type_id === expectedType &&
+                 d.value?.trim().toLowerCase() === searchValue.toLowerCase();
+        });
+        if (match) {
+          const d = match.contactdetail ?? match;
+          contact_id = d.contact_id;
+          console.log("[/api/book] Found existing contact via contactdetail — id:", contact_id);
+          // Fetch uid
+          const cRes  = await fetch(`${base}/v1/contact/${contact_id}`, { headers: authJson });
+          const cData = await cRes.json();
+          contact_uid = cData.items?.[0]?.contact?.uid;
+          console.log("[/api/book] Resolved contact_uid:", contact_uid);
         }
-        if (owner_phone) {
-          return details.some(d => d.type_id === PHONE_TYPE && normalizePhone(d.value) === normalizePhone(owner_phone));
-        }
-        return false;
-      });
+      }
 
-      if (existingContact) {
-        const c = existingContact.contact ?? existingContact;
-        contact_id  = c.id;
-        contact_uid = c.uid;
-        console.log("[/api/book] Found existing contact — id:", contact_id, "uid:", contact_uid);
-      } else {
+      // Still no match — create new contact
+      if (!contact_id && !contact_uid) {
         console.log("[/api/book] No existing contact found — creating new one...");
         const [first, ...rest] = (owner_name ?? "").trim().split(" ");
         const contactPayload = {
