@@ -213,15 +213,19 @@ export async function POST(req) {
 
     // ── STEP 4: Resolve UIDs if only numeric IDs available ───────────────────
     console.log("─────────────────────────────────────────");
-    console.log("[/api/book] STEP 4 — resolving UIDs...");
+    console.log("[/api/book] STEP 4 — resolving UIDs");
+    console.log("[/api/book] contact_id:", contact_id, "| contact_uid:", contact_uid);
+    console.log("[/api/book] animal_id:", animal_id, "| animal_uid:", animal_uid);
 
     if (!contact_uid && contact_id) {
       console.log("[/api/book] Looking up contact UID for id:", contact_id);
       const cRes  = await fetch(`${base}/v1/contact/${contact_id}`, { headers: authJson });
       const cText = await cRes.text();
       console.log("[/api/book] Contact lookup status:", cRes.status);
+      console.log("[/api/book] Contact lookup response:", cText);
       const cData = JSON.parse(cText);
-      contact_uid = cData.items?.[0]?.contact?.uid;
+      const c     = cData.items?.[0]?.contact ?? cData.contact;
+      contact_uid = c?.uid;
       console.log("[/api/book] Resolved contact_uid:", contact_uid);
     }
 
@@ -230,17 +234,49 @@ export async function POST(req) {
       const aRes  = await fetch(`${base}/v1/animal/${animal_id}`, { headers: authJson });
       const aText = await aRes.text();
       console.log("[/api/book] Animal lookup status:", aRes.status);
+      console.log("[/api/book] Animal lookup response:", aText);
       const aData = JSON.parse(aText);
-      animal_uid  = aData.items?.[0]?.animal?.uid;
+      const a     = aData.items?.[0]?.animal ?? aData.animal;
+      animal_uid  = a?.uid;
       console.log("[/api/book] Resolved animal_uid:", animal_uid);
     }
 
+    // Last resort — if still no contact UID, search via contactdetail
+    if (!contact_uid && (email || owner_phone)) {
+      console.log("[/api/book] Last resort — searching contactdetail for contact UID...");
+      const searchVal = email || owner_phone;
+      const cdRes  = await fetch(
+        `${base}/v1/contactdetail?active=1&value=${encodeURIComponent(searchVal)}&limit=5`,
+        { headers: authJson }
+      );
+      const cdText = await cdRes.text();
+      console.log("[/api/book] contactdetail lookup status:", cdRes.status);
+      console.log("[/api/book] contactdetail lookup response:", cdText);
+      const cdData = JSON.parse(cdText);
+      const detail = (cdData.items ?? [])[0]?.contactdetail ?? (cdData.items ?? [])[0];
+      if (detail?.contact_id) {
+        const cRes2  = await fetch(`${base}/v1/contact/${detail.contact_id}`, { headers: authJson });
+        const cText2 = await cRes2.text();
+        console.log("[/api/book] Contact from contactdetail status:", cRes2.status);
+        console.log("[/api/book] Contact from contactdetail response:", cText2);
+        const cData2 = JSON.parse(cText2);
+        const c2     = cData2.items?.[0]?.contact ?? cData2.contact;
+        contact_uid  = c2?.uid;
+        contact_id   = c2?.id ?? detail.contact_id;
+        console.log("[/api/book] Last resort resolved — contact_uid:", contact_uid, "contact_id:", contact_id);
+      }
+    }
+
     if (!contact_uid) {
-      return NextResponse.json({ error: "Could not resolve contact UID", step: "resolve_uids" }, { status: 502 });
+      console.error("[/api/book] ✗ Could not resolve contact UID after all attempts");
+      return NextResponse.json({ error: "Could not resolve contact UID", step: "resolve_uids", contact_id, contact_uid }, { status: 502 });
     }
     if (!animal_uid) {
-      return NextResponse.json({ error: "Could not resolve animal UID", step: "resolve_uids" }, { status: 502 });
+      console.error("[/api/book] ✗ Could not resolve animal UID");
+      return NextResponse.json({ error: "Could not resolve animal UID", step: "resolve_uids", animal_id, animal_uid }, { status: 502 });
     }
+
+    console.log("[/api/book] ✓ UIDs resolved — contact_uid:", contact_uid, "| animal_uid:", animal_uid);
 
     // ── STEP 5: POST /ezycab/booking ─────────────────────────────────────────
     console.log("─────────────────────────────────────────");
