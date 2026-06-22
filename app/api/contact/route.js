@@ -26,24 +26,34 @@ export async function GET(req) {
     const base    = process.env.EZYVET_BASE_URL;
     const headers = { Authorization: `Bearer ${token}` };
 
+    console.log("═══════════════════════════════════════");
+    console.log("[/api/contact] STEP 0 — incoming request");
+    console.log("[/api/contact] email:", email, "| phone:", phone);
+    console.log("[/api/contact] base:", base);
+
     // ── Step 1: Search contactdetail by value ─────────────────────────────────
-    // Try email first, then phone as fallback
     let contactId = null;
-
     const searchValue = email ?? phone;
-    const cdRes = await fetch(
-      `${base}/v1/contactdetail?active=1&value=${encodeURIComponent(searchValue)}&limit=10`,
-      { headers }
-    );
-    const cdData = await cdRes.json();
-    const details = cdData.items ?? [];
+    const cdUrl = `${base}/v1/contactdetail?active=1&value=${encodeURIComponent(searchValue)}&limit=10`;
 
-    console.log("[/api/contact] contactdetail search for:", searchValue, "— found:", details.length);
+    console.log("─────────────────────────────────────────");
+    console.log("[/api/contact] STEP 1 — contactdetail search");
+    console.log("[/api/contact] URL:", cdUrl);
+
+    const cdRes  = await fetch(cdUrl, { headers });
+    const cdText = await cdRes.text();
+    console.log("[/api/contact] contactdetail status:", cdRes.status);
+    console.log("[/api/contact] contactdetail response:", cdText);
+
+    const cdData  = JSON.parse(cdText);
+    const details = cdData.items ?? [];
+    console.log("[/api/contact] contactdetail items found:", details.length);
 
     // Filter to correct type_id and exact value match
     const expectedTypeId = email ? EMAIL_TYPE : PHONE_TYPE;
     const match = details.find(i => {
       const d = i.contactdetail ?? i;
+      console.log("[/api/contact] checking detail — type_id:", d.type_id, "value:", d.value, "contact_id:", d.contact_id);
       if (d.type_id !== expectedTypeId) return false;
       if (email) return d.value?.trim().toLowerCase() === email;
       if (phone) return normalizePhone(d.value) === normalizePhone(phone);
@@ -53,22 +63,26 @@ export async function GET(req) {
     if (match) {
       const d = match.contactdetail ?? match;
       contactId = d.contact_id;
-      console.log("[/api/contact] Found via contactdetail — contact_id:", contactId);
+      console.log("[/api/contact] ✓ Match found — contact_id:", contactId);
+    } else {
+      console.log("[/api/contact] ✗ No match in contactdetail results");
     }
 
-    // ── Step 2: If not found by contactdetail, fall back to paginating contacts
-    // (handles cases where contactdetail search misses due to formatting)
+    // ── Step 2: Phone fallback — paginate contacts ────────────────────────────
     if (!contactId && phone) {
-      console.log("[/api/contact] Falling back to contact pagination for phone:", phone);
+      console.log("─────────────────────────────────────────");
+      console.log("[/api/contact] STEP 2 — phone fallback pagination");
       let page = 1;
       const limit = 200;
       outer: while (true) {
-        const res   = await fetch(
-          `${base}/v1/contact?active=1&is_customer=1&limit=${limit}&page=${page}`,
-          { headers }
-        );
-        const data  = await res.json();
-        const items = data.items ?? [];
+        const pgUrl  = `${base}/v1/contact?active=1&is_customer=1&limit=${limit}&page=${page}`;
+        console.log("[/api/contact] Fetching page", page, ":", pgUrl);
+        const res    = await fetch(pgUrl, { headers });
+        const pgText = await res.text();
+        console.log("[/api/contact] Page", page, "status:", res.status);
+        const data   = JSON.parse(pgText);
+        const items  = data.items ?? [];
+        console.log("[/api/contact] Page", page, "items:", items.length);
         if (items.length === 0) break;
         for (const i of items) {
           const c = i.contact ?? i;
@@ -76,41 +90,68 @@ export async function GET(req) {
             d => d.type_id === PHONE_TYPE &&
                  normalizePhone(d.value) === normalizePhone(phone)
           );
-          if (found) { contactId = c.id; break outer; }
+          if (found) {
+            contactId = c.id;
+            console.log("[/api/contact] ✓ Phone match found on page", page, "— contact_id:", contactId);
+            break outer;
+          }
         }
         if (items.length < limit) break;
         page++;
       }
+      if (!contactId) console.log("[/api/contact] ✗ No phone match found after pagination");
     }
 
-    // ── Step 3: Not found → return found: false ───────────────────────────────
+    // ── Step 3: Not found ─────────────────────────────────────────────────────
     if (!contactId) {
-      console.log("[/api/contact] No contact found for:", searchValue);
+      console.log("─────────────────────────────────────────");
+      console.log("[/api/contact] STEP 3 — no contact found, returning found: false");
+      console.log("═══════════════════════════════════════");
       const r = NextResponse.json({ found: false, contact: null, animals: [] });
       r.headers.set("Access-Control-Allow-Origin", CORS);
       return r;
     }
 
     // ── Step 4: Fetch full contact record ─────────────────────────────────────
-    const cRes  = await fetch(`${base}/v1/contact/${contactId}`, { headers });
-    const cData = await cRes.json();
+    const cUrl = `${base}/v1/contact/${contactId}`;
+    console.log("─────────────────────────────────────────");
+    console.log("[/api/contact] STEP 4 — fetching full contact record");
+    console.log("[/api/contact] URL:", cUrl);
+
+    const cRes  = await fetch(cUrl, { headers });
+    const cText = await cRes.text();
+    console.log("[/api/contact] contact fetch status:", cRes.status);
+    console.log("[/api/contact] contact fetch response:", cText);
+
+    const cData   = JSON.parse(cText);
     const contact = cData.items?.[0]?.contact ?? cData.contact;
 
     if (!contact) {
+      console.log("[/api/contact] ✗ Contact record not found in response");
+      console.log("═══════════════════════════════════════");
       const r = NextResponse.json({ found: false, contact: null, animals: [] });
       r.headers.set("Access-Control-Allow-Origin", CORS);
       return r;
     }
 
+    console.log("[/api/contact] ✓ Contact:", contact.first_name, contact.last_name, "| uid:", contact.uid);
+
     // ── Step 5: Fetch animals ─────────────────────────────────────────────────
-    const aRes  = await fetch(
-      `${base}/v1/animal?active=1&contact_id=${contact.id}&limit=20`,
-      { headers }
-    );
-    const aData   = await aRes.json();
+    const aUrl = `${base}/v1/animal?active=1&contact_id=${contact.id}&limit=20`;
+    console.log("─────────────────────────────────────────");
+    console.log("[/api/contact] STEP 5 — fetching animals");
+    console.log("[/api/contact] URL:", aUrl);
+
+    const aRes  = await fetch(aUrl, { headers });
+    const aText = await aRes.text();
+    console.log("[/api/contact] animals fetch status:", aRes.status);
+    console.log("[/api/contact] animals fetch response:", aText);
+
+    const aData   = JSON.parse(aText);
     const animals = (aData.items ?? []).map(i => {
       const a   = i.animal ?? i;
       const dob = a.date_of_birth ? new Date(a.date_of_birth * 1000) : null;
+      console.log("[/api/contact] animal:", a.name, "| id:", a.id, "| uid:", a.uid, "| species:", a.species_name);
       return {
         id:      a.id,
         uid:     a.uid,
@@ -123,9 +164,14 @@ export async function GET(req) {
       };
     });
 
+    console.log("[/api/contact] ✓ Animals found:", animals.length);
+
     const detailList    = contact.contact_detail_list ?? [];
     const email_address = detailList.find(d => d.type_id === EMAIL_TYPE)?.value ?? email ?? "";
     const phone_number  = detailList.find(d => d.type_id === PHONE_TYPE)?.value ?? phone ?? "";
+
+    console.log("[/api/contact] ✓ Returning found: true");
+    console.log("═══════════════════════════════════════");
 
     const r = NextResponse.json({
       found: true,
@@ -143,8 +189,8 @@ export async function GET(req) {
     return r;
 
   } catch (err) {
-    console.error("[/api/contact]", err);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    console.error("[/api/contact] UNCAUGHT ERROR:", err);
+    return NextResponse.json({ error: "Internal server error", detail: err.message }, { status: 500 });
   }
 }
 
