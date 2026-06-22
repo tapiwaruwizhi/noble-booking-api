@@ -55,15 +55,32 @@ export async function POST(req) {
       console.log("[/api/book] STEP 1 — creating new contact...");
       const [first, ...rest] = (owner_name ?? "").trim().split(" ");
       const contactPayload = {
-        first_name: first,
-        last_name:  rest.join(" ") || "-",
-        email,
-        phone:      owner_phone ?? "",
-        active:     1,
+        first_name:   first,
+        last_name:    rest.join(" ") || "-",
+        is_customer:  true,
+        is_business:  false,
+        is_supplier:  false,
+        is_vet:       false,
+        contact_detail_list: [
+          // Email
+          ...(email ? [{
+            name:                  "Email",
+            value:                 email,
+            contact_detail_type_id: "1", // type_id 1 = email
+            preferred:             1,
+          }] : []),
+          // Phone
+          ...(owner_phone ? [{
+            name:                  "Mobile",
+            value:                 owner_phone,
+            contact_detail_type_id: "3", // type_id 3 = phone
+            preferred:             0,
+          }] : []),
+        ],
       };
       console.log("[/api/book] Contact payload:", JSON.stringify(contactPayload));
 
-      const cRes  = await fetch(`${base}/v2/contact`, {
+      const cRes  = await fetch(`${base}/v1/contact`, {
         method: "POST", headers: authJson,
         body: JSON.stringify(contactPayload),
       });
@@ -110,7 +127,7 @@ export async function POST(req) {
       };
       console.log("[/api/book] Animal payload:", JSON.stringify(animalPayload));
 
-      const aRes  = await fetch(`${base}/v2/animal`, {
+      const aRes  = await fetch(`${base}/v1/animal`, {
         method: "POST", headers: authJson,
         body: JSON.stringify(animalPayload),
       });
@@ -172,10 +189,9 @@ export async function POST(req) {
 
     if (!contact_uid && contact_id) {
       console.log("[/api/book] Looking up contact UID for id:", contact_id);
-      const cRes  = await fetch(`${base}/v2/contact?id=${contact_id}&limit=1`, { headers: authJson });
+      const cRes  = await fetch(`${base}/v1/contact/${contact_id}`, { headers: authJson });
       const cText = await cRes.text();
       console.log("[/api/book] Contact lookup status:", cRes.status);
-      console.log("[/api/book] Contact lookup body:", cText);
       const cData = JSON.parse(cText);
       contact_uid = cData.items?.[0]?.contact?.uid;
       console.log("[/api/book] Resolved contact_uid:", contact_uid);
@@ -183,10 +199,9 @@ export async function POST(req) {
 
     if (!animal_uid && animal_id) {
       console.log("[/api/book] Looking up animal UID for id:", animal_id);
-      const aRes  = await fetch(`${base}/v2/animal?id=${animal_id}&limit=1`, { headers: authJson });
+      const aRes  = await fetch(`${base}/v1/animal/${animal_id}`, { headers: authJson });
       const aText = await aRes.text();
       console.log("[/api/book] Animal lookup status:", aRes.status);
-      console.log("[/api/book] Animal lookup body:", aText);
       const aData = JSON.parse(aText);
       animal_uid  = aData.items?.[0]?.animal?.uid;
       console.log("[/api/book] Resolved animal_uid:", animal_uid);
