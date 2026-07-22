@@ -61,9 +61,12 @@ export default function ImagesAdmin() {
   }
 
   const listFor = {
-    service:  services.map(s => ({ id: s.uid, label: s.name, sub: s.uid })),
-    location: separations.map(s => ({ id: s.id, label: s.name, sub: `id: ${s.id}` })),
-    doctor:   resources.map(r => ({ id: r.uid, label: r.name, sub: r.separationName })),
+    service:  [{ id: "default", label: "Default (fallback for all services)", sub: "shown when no image uploaded" },
+               ...services.map(s => ({ id: s.uid, label: s.name, sub: s.uid }))],
+    location: [{ id: "default", label: "Default (fallback for all locations)", sub: "shown when no image uploaded" },
+               ...separations.map(s => ({ id: s.id, label: s.name, sub: `id: ${s.id}` }))],
+    doctor:   [{ id: "default", label: "Default (fallback for all doctors)", sub: "shown when no image uploaded" },
+               ...resources.map(r => ({ id: r.uid, label: r.name, sub: r.separationName }))],
   }[tab];
 
   return (

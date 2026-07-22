@@ -64,7 +64,7 @@ const BRANCH_MAP = {
 
 const FALLBACK_BRANCH = {
   realName: null,
-  photo:    "https://framerusercontent.com/images/04p16NKQdQElKK3AUH9nMUopoI4.jpg",
+  photo:    null, // replaced by Vercel Blob "locations/default.jpg" at runtime — see getBlobOverrides
   address:  "Dubai, UAE",
   hours:    "Call +971 600 566 253",
 };
@@ -157,7 +157,7 @@ export async function GET() {
         ezyvetName,
         realName:    branch.realName,
         displayName: getDisplayName(branch.realName, ezyvetName),
-        photo:       locationOverrides[s.id] ?? branch.photo, // admin upload wins
+        photo:       locationOverrides[s.id] ?? branch.photo ?? locationOverrides["default"] ?? null,
         address:     branch.address,
         hours:       branch.hours,
       };
@@ -170,7 +170,7 @@ export async function GET() {
       .map((a) => ({
         uid:               a.uid,
         name:              a.name,
-        photo:             serviceOverrides[a.uid] ?? null, // admin-uploaded only, no hardcoded fallback
+        photo:             serviceOverrides[a.uid] ?? serviceOverrides["default"] ?? null,
         duration:          15,
         isConsultRequired: a.is_consult_required ?? true,
       }));
@@ -183,12 +183,12 @@ export async function GET() {
         return {
           uid:                r.uid,
           name:               r.name,
-          photo:              doctorOverrides[r.uid] ?? getVetPhoto(r.name), // admin upload wins
+          photo:              doctorOverrides[r.uid] ?? getVetPhoto(r.name) ?? doctorOverrides["default"] ?? null,
           separationId:       r.ownership_id ?? null,
           separationName:     sep.displayName ?? sep.ezyvetName ?? "Main Clinic",
           separationEzyName:  sep.ezyvetName  ?? "Main Clinic",
           separationRealName: sep.realName    ?? null,
-          separationPhoto:    sep.photo       ?? FALLBACK_BRANCH.photo,
+          separationPhoto:    sep.photo       ?? locationOverrides["default"] ?? null,
           separationAddress:  sep.address     ?? "Dubai, UAE",
           separationHours:    sep.hours       ?? "Call for hours",
           type:               r.type_name     ?? "vet",
