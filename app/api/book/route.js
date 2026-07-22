@@ -188,18 +188,27 @@ export async function POST(req) {
     // ── STEP 5: POST /ezycab/booking ─────────────────────────────────────────
     console.log("─────────────────────────────────────────");
     console.log("[/api/book] STEP 5 — posting booking...");
+
+    // Generate the reference BEFORE booking so it can be embedded in the
+    // description — this makes it searchable directly inside ezyVet by staff,
+    // not just a cosmetic string shown to the customer.
+    const ref = `NVC-${Date.now().toString(36).slice(-4)}${Math.random().toString(36).slice(2, 4)}`.toUpperCase();
+    const baseDescription = description ?? "Online booking via Noble Vet website";
+    const fullDescription = `${baseDescription} | Ref: ${ref}`;
+
     const bookPayload = {
       startTime:           startTimeISO,
       type:                appt_type_uid,
       durationMinutes:     durationMinutes,
       appointmentStatus:   "unconfirmed",
-      description:         description ?? "Online booking via Noble Vet website",
+      description:         fullDescription,
       animal:              animal_uid,
       contact:             contact_uid,
       provider:            resource_uid,
       additionalResources: [resource_uid],
     };
 
+    console.log("[/api/book] Booking reference generated:", ref);
     console.log("[/api/book] Booking URL:", `${BOOKING_BASE}/ezycab/booking`);
     console.log("[/api/book] Booking payload:", JSON.stringify(bookPayload, null, 2));
 
@@ -218,7 +227,6 @@ export async function POST(req) {
     const bookData = JSON.parse(bookText);
     const appt     = bookData.data?.[0] ?? bookData.appointment ?? bookData;
     const apptId   = appt?.id ?? appt?.uid;
-    const ref      = `NVC-${(apptId ?? Math.random().toString(36).slice(2)).slice(-6).toUpperCase()}`;
 
     console.log("[/api/book] ✓ Booking successful — ref:", ref, "apptId:", apptId);
     console.log("═══════════════════════════════════════");
