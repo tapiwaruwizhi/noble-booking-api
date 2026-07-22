@@ -7,6 +7,7 @@
 
 import { NextResponse } from "next/server";
 import { getAccessToken } from "@/lib/ezyvet/auth";
+import { list } from "@vercel/blob";
 
 const CORS = process.env.ALLOWED_ORIGIN ?? "*";
 
@@ -93,6 +94,26 @@ function getVetPhoto(name = "") {
   return null;
 }
 
+// ── Vercel Blob overrides ────────────────────────────────────────────────────
+// Admin-uploaded images (via /admin/images) take priority over hardcoded
+// CDN/VET_PHOTOS fallbacks. Blob paths follow: locations/{id}.ext, doctors/{uid}.ext
+async function getBlobOverrides(prefix) {
+  try {
+    const { blobs } = await list({ prefix: `${prefix}/`, limit: 200 });
+    const map = {};
+    for (const b of blobs) {
+      // e.g. "locations/4.jpg" → key "4"
+      const filename = b.pathname.split("/").pop();
+      const key      = filename.replace(/\.[^.]+$/, "");
+      map[key] = b.url;
+    }
+    return map;
+  } catch (err) {
+    console.error(`[/api/startup] Blob list failed for prefix "${prefix}":`, err.message);
+    return {};
+  }
+}
+
 export async function GET() {
   try {
     const token = await getAccessToken();
@@ -108,6 +129,13 @@ export async function GET() {
 
     const [siteData, apptData, resData, sepData] = await Promise.all([
       siteRes.json(), apptRes.json(), resRes.json(), sepRes.json(),
+    ]);
+
+    // ── Vercel Blob overrides (admin-uploaded images) ──────────────────────────
+    const [locationOverrides, doctorOverrides, serviceOverrides] = await Promise.all([
+      getBlobOverrides("locations"),
+      getBlobOverrides("doctors"),
+      getBlobOverrides("services"),
     ]);
 
     // ── Site ──────────────────────────────────────────────────────────────────
@@ -129,7 +157,7 @@ export async function GET() {
         ezyvetName,
         realName:    branch.realName,
         displayName: getDisplayName(branch.realName, ezyvetName),
-        photo:       branch.photo,
+        photo:       locationOverrides[s.id] ?? branch.photo, // admin upload wins
         address:     branch.address,
         hours:       branch.hours,
       };
@@ -142,6 +170,7 @@ export async function GET() {
       .map((a) => ({
         uid:               a.uid,
         name:              a.name,
+        photo:             serviceOverrides[a.uid] ?? null, // admin-uploaded only, no hardcoded fallback
         duration:          15,
         isConsultRequired: a.is_consult_required ?? true,
       }));
@@ -154,7 +183,7 @@ export async function GET() {
         return {
           uid:                r.uid,
           name:               r.name,
-          photo:              getVetPhoto(r.name),
+          photo:              doctorOverrides[r.uid] ?? getVetPhoto(r.name), // admin upload wins
           separationId:       r.ownership_id ?? null,
           separationName:     sep.displayName ?? sep.ezyvetName ?? "Main Clinic",
           separationEzyName:  sep.ezyvetName  ?? "Main Clinic",
