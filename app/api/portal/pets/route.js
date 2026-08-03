@@ -53,3 +53,129 @@ export async function GET(req) {
 export async function OPTIONS(req) {
   return new NextResponse(null, { status: 204, headers: getCredentialedCorsHeaders(req) });
 }
+
+// ── POST — create a new pet for the logged-in contact ───────────────────────
+export async function POST(req) {
+  const corsHeaders = getCredentialedCorsHeaders(req);
+  try {
+    const session = getSession(req);
+    if (!session) {
+      const r = NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+      Object.entries(corsHeaders).forEach(([k, v]) => r.headers.set(k, v));
+      return r;
+    }
+
+    const { name, species, breed, sex, colour, dob } = await req.json();
+    if (!name) {
+      const r = NextResponse.json({ error: "name is required" }, { status: 400 });
+      Object.entries(corsHeaders).forEach(([k, v]) => r.headers.set(k, v));
+      return r;
+    }
+
+    const token   = await getAccessToken();
+    const base    = process.env.EZYVET_BASE_URL;
+    const headers = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
+
+    const payload = {
+      name,
+      contact_id: session.contactId,
+      species:    species || "Dog",
+      breed:      breed   || "",
+      sex:        sex     || "",
+      colour:     colour  || "",
+      active:     1,
+    };
+    if (dob) payload.date_of_birth = Math.floor(new Date(dob).getTime() / 1000);
+
+    console.log("[/api/portal/pets POST] Creating pet:", JSON.stringify(payload));
+
+    const aRes  = await fetch(`${base}/v2/animal`, { method: "POST", headers, body: JSON.stringify(payload) });
+    const aText = await aRes.text();
+    console.log("[/api/portal/pets POST] status:", aRes.status, aText);
+
+    if (!aRes.ok) {
+      const r = NextResponse.json({ error: "Failed to create pet", detail: aText }, { status: 502 });
+      Object.entries(corsHeaders).forEach(([k, v]) => r.headers.set(k, v));
+      return r;
+    }
+
+    const aData = JSON.parse(aText);
+    const a = aData.items?.[0]?.animal ?? aData.animal;
+
+    const r = NextResponse.json({ success: true, pet: { id: a?.id, uid: a?.uid, name } });
+    Object.entries(corsHeaders).forEach(([k, v]) => r.headers.set(k, v));
+    return r;
+
+  } catch (err) {
+    console.error("[/api/portal/pets POST] error:", err);
+    const r = NextResponse.json({ error: "Internal server error", detail: err.message }, { status: 500 });
+    Object.entries(corsHeaders).forEach(([k, v]) => r.headers.set(k, v));
+    return r;
+  }
+}
+
+// ── PATCH — update an existing pet, only if it belongs to the logged-in contact
+export async function PATCH(req) {
+  const corsHeaders = getCredentialedCorsHeaders(req);
+  try {
+    const session = getSession(req);
+    if (!session) {
+      const r = NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+      Object.entries(corsHeaders).forEach(([k, v]) => r.headers.set(k, v));
+      return r;
+    }
+
+    const { animal_id, name, species, breed, sex, colour, dob } = await req.json();
+    if (!animal_id) {
+      const r = NextResponse.json({ error: "animal_id is required" }, { status: 400 });
+      Object.entries(corsHeaders).forEach(([k, v]) => r.headers.set(k, v));
+      return r;
+    }
+
+    const token   = await getAccessToken();
+    const base    = process.env.EZYVET_BASE_URL;
+    const headers = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
+
+    // ── Ownership check — never let a client edit another client's pet ──────
+    const checkRes  = await fetch(`${base}/v2/animal?id=${animal_id}&limit=1`, { headers });
+    const checkData = await checkRes.json();
+    const existing  = checkData.items?.[0]?.animal ?? checkData.animal;
+
+    if (!existing || String(existing.contact_id) !== String(session.contactId)) {
+      console.warn("[/api/portal/pets PATCH] Ownership check failed — animal_id:", animal_id, "session contact:", session.contactId, "animal contact:", existing?.contact_id);
+      const r = NextResponse.json({ error: "Pet not found" }, { status: 404 });
+      Object.entries(corsHeaders).forEach(([k, v]) => r.headers.set(k, v));
+      return r;
+    }
+
+    const payload = {};
+    if (name)    payload.name    = name;
+    if (species) payload.species = species;
+    if (breed !== undefined) payload.breed  = breed;
+    if (sex)     payload.sex     = sex;
+    if (colour !== undefined) payload.colour = colour;
+    if (dob)     payload.date_of_birth = Math.floor(new Date(dob).getTime() / 1000);
+
+    console.log("[/api/portal/pets PATCH] Updating animal_id:", animal_id, "payload:", JSON.stringify(payload));
+
+    const updRes  = await fetch(`${base}/v2/animal/${animal_id}`, { method: "PATCH", headers, body: JSON.stringify(payload) });
+    const updText = await updRes.text();
+    console.log("[/api/portal/pets PATCH] status:", updRes.status, updText);
+
+    if (!updRes.ok) {
+      const r = NextResponse.json({ error: "Failed to update pet", detail: updText }, { status: 502 });
+      Object.entries(corsHeaders).forEach(([k, v]) => r.headers.set(k, v));
+      return r;
+    }
+
+    const r = NextResponse.json({ success: true });
+    Object.entries(corsHeaders).forEach(([k, v]) => r.headers.set(k, v));
+    return r;
+
+  } catch (err) {
+    console.error("[/api/portal/pets PATCH] error:", err);
+    const r = NextResponse.json({ error: "Internal server error", detail: err.message }, { status: 500 });
+    Object.entries(corsHeaders).forEach(([k, v]) => r.headers.set(k, v));
+    return r;
+  }
+}
