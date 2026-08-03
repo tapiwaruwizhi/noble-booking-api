@@ -46,13 +46,15 @@ export async function GET(req) {
       .filter(a => a.description?.includes("Ref: NVC-"))
       .map(a => {
         const refMatch = a.description.match(/Ref: (NVC-[A-Z0-9]+)/);
-        const statusId = a.appointment_status_id ?? a.status;
+        const statusId = a.status_id;
+        const durationSeconds = a.duration ?? 0; // ezyVet returns duration in SECONDS
         return {
           id:          a.id,
           uid:         a.uid,
           reference:   refMatch ? refMatch[1] : null,
-          start_time:  a.start_time,
-          end_time:    a.end_time,
+          start_time:  a.start_at,                      // ezyVet field is "start_at"
+          end_time:    a.start_at ? a.start_at + durationSeconds : null,
+          duration_minutes: Math.round(durationSeconds / 60),
           status_id:   statusId,
           status:      statusMap[statusId] ?? "Unknown",
           description: a.description,

@@ -16,17 +16,20 @@ import { getAppointmentStatusMap } from "@/lib/appointmentStatus";
 
 function mapAppt(i, statusMap) {
   const a = i.appointment ?? i;
-  const statusId = a.appointment_status_id ?? a.status;
+  const statusId = a.status_id;
+  const durationSeconds = a.duration ?? 0; // ezyVet returns duration in SECONDS
   return {
-    id:            a.id,
-    uid:           a.uid,
-    start_time:    a.start_time,
-    end_time:      a.end_time,
-    status_id:     statusId,
-    status:        statusMap[statusId] ?? "Unknown",
-    description:   a.description,
-    animal_id:     a.animal_id,
-    resource_id:   a.resource_id ?? a.provider_id,
+    id:          a.id,
+    uid:         a.uid,
+    start_time:  a.start_at,                          // ezyVet field is "start_at", not "start_time"
+    end_time:    a.start_at ? a.start_at + durationSeconds : null,
+    duration_minutes: Math.round(durationSeconds / 60),
+    status_id:   statusId,
+    status:      statusMap[statusId] ?? "Unknown",
+    description: a.description,
+    animal_id:   a.animal_id,
+    contact_id:  a.contact_id,
+    resource_id: a.resources?.[0]?.id ?? a.sales_resource ?? null,
   };
 }
 
