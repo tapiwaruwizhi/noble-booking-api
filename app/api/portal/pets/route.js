@@ -158,9 +158,16 @@ export async function PATCH(req) {
 
     console.log("[/api/portal/pets PATCH] Updating animal_id:", animal_id, "payload:", JSON.stringify(payload));
 
-    const updRes  = await fetch(`${base}/v2/animal/${animal_id}`, { method: "PATCH", headers, body: JSON.stringify(payload) });
-    const updText = await updRes.text();
-    console.log("[/api/portal/pets PATCH] status:", updRes.status, updText);
+    let updRes  = await fetch(`${base}/v2/animal/${animal_id}`, { method: "PATCH", headers, body: JSON.stringify(payload) });
+    let updText = await updRes.text();
+    console.log("[/api/portal/pets PATCH] v2 PATCH status:", updRes.status, updText);
+
+    if (!updRes.ok && updText.includes("unknown or unsupported")) {
+      console.log("[/api/portal/pets PATCH] PATCH unsupported — trying PUT");
+      updRes  = await fetch(`${base}/v2/animal/${animal_id}`, { method: "PUT", headers, body: JSON.stringify(payload) });
+      updText = await updRes.text();
+      console.log("[/api/portal/pets PATCH] v2 PUT status:", updRes.status, updText);
+    }
 
     if (!updRes.ok) {
       const r = NextResponse.json({ error: "Failed to update pet", detail: updText }, { status: 502 });

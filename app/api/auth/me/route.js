@@ -87,11 +87,20 @@ export async function PATCH(req) {
       if (first_name) payload.first_name = first_name;
       if (last_name)  payload.last_name  = last_name;
 
-      const nameRes  = await fetch(`${base}/v2/contact/${session.contactId}`, {
+      let nameRes  = await fetch(`${base}/v2/contact/${session.contactId}`, {
         method: "PATCH", headers: jsonHeaders, body: JSON.stringify(payload),
       });
-      const nameText = await nameRes.text();
-      console.log("[/api/auth/me PATCH] name update status:", nameRes.status, nameText);
+      let nameText = await nameRes.text();
+      console.log("[/api/auth/me PATCH] name update (v2 PATCH) status:", nameRes.status, nameText);
+
+      if (!nameRes.ok && nameText.includes("unknown or unsupported")) {
+        console.log("[/api/auth/me PATCH] PATCH unsupported on contact — trying PUT");
+        nameRes  = await fetch(`${base}/v2/contact/${session.contactId}`, {
+          method: "PUT", headers: jsonHeaders, body: JSON.stringify(payload),
+        });
+        nameText = await nameRes.text();
+        console.log("[/api/auth/me PATCH] name update (v2 PUT) status:", nameRes.status, nameText);
+      }
     }
 
     // ── Step 2: upsert phone as a contactdetail record ──────────────────────
@@ -106,11 +115,24 @@ export async function PATCH(req) {
 
       if (existingPhone) {
         console.log("[/api/auth/me PATCH] Updating existing phone contactdetail id:", existingPhone.id);
-        const updRes  = await fetch(`${base}/v2/contactdetail/${existingPhone.id}`, {
+
+        // Try v1 PATCH first
+        let updRes  = await fetch(`${base}/v1/contactdetail/${existingPhone.id}`, {
           method: "PATCH", headers: jsonHeaders, body: JSON.stringify({ value: phone }),
         });
-        const updText = await updRes.text();
-        console.log("[/api/auth/me PATCH] phone update status:", updRes.status, updText);
+        let updText = await updRes.text();
+        console.log("[/api/auth/me PATCH] v1 PATCH status:", updRes.status, updText);
+
+        // If PATCH itself isn't a supported method here, try PUT instead
+        if (!updRes.ok && updText.includes("unknown or unsupported")) {
+          console.log("[/api/auth/me PATCH] PATCH unsupported — trying PUT instead");
+          updRes  = await fetch(`${base}/v1/contactdetail/${existingPhone.id}`, {
+            method: "PUT", headers: jsonHeaders, body: JSON.stringify({ value: phone }),
+          });
+          updText = await updRes.text();
+          console.log("[/api/auth/me PATCH] v1 PUT status:", updRes.status, updText);
+        }
+
         if (!updRes.ok) {
           const r = NextResponse.json({ error: "Failed to update phone", detail: updText }, { status: 502 });
           Object.entries(corsHeaders).forEach(([k, v]) => r.headers.set(k, v));
