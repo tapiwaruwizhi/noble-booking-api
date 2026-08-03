@@ -116,9 +116,14 @@ export async function PATCH(req) {
       if (existingPhone) {
         console.log("[/api/auth/me PATCH] Updating existing phone contactdetail id:", existingPhone.id);
 
-        // Try v1 PATCH first
+        const updatePayload = {
+          value:                   phone,
+          contact_id:              session.contactId,
+          contact_detail_type_id:  String(PHONE_TYPE),
+        };
+
         let updRes  = await fetch(`${base}/v1/contactdetail/${existingPhone.id}`, {
-          method: "PATCH", headers: jsonHeaders, body: JSON.stringify({ value: phone }),
+          method: "PATCH", headers: jsonHeaders, body: JSON.stringify(updatePayload),
         });
         let updText = await updRes.text();
         console.log("[/api/auth/me PATCH] v1 PATCH status:", updRes.status, updText);
@@ -127,7 +132,7 @@ export async function PATCH(req) {
         if (!updRes.ok && updText.includes("unknown or unsupported")) {
           console.log("[/api/auth/me PATCH] PATCH unsupported — trying PUT instead");
           updRes  = await fetch(`${base}/v1/contactdetail/${existingPhone.id}`, {
-            method: "PUT", headers: jsonHeaders, body: JSON.stringify({ value: phone }),
+            method: "PUT", headers: jsonHeaders, body: JSON.stringify(updatePayload),
           });
           updText = await updRes.text();
           console.log("[/api/auth/me PATCH] v1 PUT status:", updRes.status, updText);
