@@ -12,8 +12,9 @@
 import { NextResponse } from "next/server";
 import { getAccessToken } from "@/lib/ezyvet/auth";
 import { generateCode, storeOtp, sendOtp } from "@/lib/otp";
+import { getCredentialedCorsHeaders } from "@/lib/cors";
 
-const CORS = process.env.ALLOWED_ORIGIN ?? "*";
+
 const isEmail = (v) => /\S+@\S+\.\S+/.test(v);
 const normalizePhone = (v = "") => v.replace(/[\s\-().+]/g, "");
 
@@ -21,7 +22,9 @@ export async function POST(req) {
   try {
     const { identifier } = await req.json();
     if (!identifier || typeof identifier !== "string") {
-      return NextResponse.json({ error: "identifier is required" }, { status: 400 });
+      const r = NextResponse.json({ error: "identifier is required" }, { status: 400 });
+      Object.entries(getCredentialedCorsHeaders(req)).forEach(([k, v]) => r.headers.set(k, v));
+      return r;
     }
 
     const val = identifier.trim();
@@ -57,7 +60,7 @@ export async function POST(req) {
       console.log("[/api/auth/request-otp] No contact found — returning generic success (anti-enumeration)");
       console.log("═══════════════════════════════════════");
       const r = NextResponse.json({ sent: true });
-      r.headers.set("Access-Control-Allow-Origin", CORS);
+      Object.entries(getCredentialedCorsHeaders(req)).forEach(([k, v]) => r.headers.set(k, v));
       return r;
     }
 
@@ -69,7 +72,7 @@ export async function POST(req) {
     if (!contact) {
       console.log("[/api/auth/request-otp] Contact record fetch failed — returning generic success");
       const r = NextResponse.json({ sent: true });
-      r.headers.set("Access-Control-Allow-Origin", CORS);
+      Object.entries(getCredentialedCorsHeaders(req)).forEach(([k, v]) => r.headers.set(k, v));
       return r;
     }
 
@@ -86,22 +89,17 @@ export async function POST(req) {
     console.log("═══════════════════════════════════════");
 
     const r = NextResponse.json({ sent: true });
-    r.headers.set("Access-Control-Allow-Origin", CORS);
+    Object.entries(getCredentialedCorsHeaders(req)).forEach(([k, v]) => r.headers.set(k, v));
     return r;
 
   } catch (err) {
     console.error("[/api/auth/request-otp] error:", err);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    const r = NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    Object.entries(getCredentialedCorsHeaders(req)).forEach(([k, v]) => r.headers.set(k, v));
+    return r;
   }
 }
 
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 204,
-    headers: {
-      "Access-Control-Allow-Origin":  CORS,
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-    },
-  });
+export async function OPTIONS(req) {
+  return new NextResponse(null, { status: 204, headers: getCredentialedCorsHeaders(req) });
 }

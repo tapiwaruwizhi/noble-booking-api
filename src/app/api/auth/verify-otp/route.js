@@ -6,14 +6,15 @@
 import { NextResponse } from "next/server";
 import { verifyOtp } from "@/lib/otp";
 import { createSessionToken, SESSION_COOKIE_NAME, SESSION_MAX_AGE } from "@/lib/session";
-
-const CORS = process.env.ALLOWED_ORIGIN ?? "*";
+import { getCredentialedCorsHeaders } from "@/lib/cors";
 
 export async function POST(req) {
   try {
     const { identifier, code } = await req.json();
     if (!identifier || !code) {
-      return NextResponse.json({ error: "identifier and code are required" }, { status: 400 });
+      const r = NextResponse.json({ error: "identifier and code are required" }, { status: 400 });
+      Object.entries(getCredentialedCorsHeaders(req)).forEach(([k, v]) => r.headers.set(k, v));
+      return r;
     }
 
     console.log("[/api/auth/verify-otp] Verifying code for:", identifier);
@@ -21,7 +22,9 @@ export async function POST(req) {
     const contactData = await verifyOtp(identifier.trim(), code.trim());
     if (!contactData) {
       console.log("[/api/auth/verify-otp] ✗ Invalid or expired code");
-      return NextResponse.json({ error: "Invalid or expired code" }, { status: 401 });
+      const r = NextResponse.json({ error: "Invalid or expired code" }, { status: 401 });
+      Object.entries(getCredentialedCorsHeaders(req)).forEach(([k, v]) => r.headers.set(k, v));
+      return r;
     }
 
     const token = createSessionToken({
@@ -41,22 +44,17 @@ export async function POST(req) {
       maxAge: SESSION_MAX_AGE,
       path: "/",
     });
-    r.headers.set("Access-Control-Allow-Origin", CORS);
+    Object.entries(getCredentialedCorsHeaders(req)).forEach(([k, v]) => r.headers.set(k, v));
     return r;
 
   } catch (err) {
     console.error("[/api/auth/verify-otp] error:", err);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    const r = NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    Object.entries(getCredentialedCorsHeaders(req)).forEach(([k, v]) => r.headers.set(k, v));
+    return r;
   }
 }
 
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 204,
-    headers: {
-      "Access-Control-Allow-Origin":  CORS,
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-    },
-  });
+export async function OPTIONS(req) {
+  return new NextResponse(null, { status: 204, headers: getCredentialedCorsHeaders(req) });
 }

@@ -3,23 +3,15 @@
 
 import { NextResponse } from "next/server";
 import { SESSION_COOKIE_NAME } from "@/lib/session";
+import { getCredentialedCorsHeaders } from "@/lib/cors";
 
-const CORS = process.env.ALLOWED_ORIGIN ?? "*";
-
-export async function POST() {
+export async function POST(req) {
   const r = NextResponse.json({ success: true });
   r.cookies.set(SESSION_COOKIE_NAME, "", { httpOnly: true, secure: true, sameSite: "lax", maxAge: 0, path: "/" });
-  r.headers.set("Access-Control-Allow-Origin", CORS);
+  Object.entries(getCredentialedCorsHeaders(req)).forEach(([k, v]) => r.headers.set(k, v));
   return r;
 }
 
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 204,
-    headers: {
-      "Access-Control-Allow-Origin":  CORS,
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-    },
-  });
+export async function OPTIONS(req) {
+  return new NextResponse(null, { status: 204, headers: getCredentialedCorsHeaders(req) });
 }

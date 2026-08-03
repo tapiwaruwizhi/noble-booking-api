@@ -5,14 +5,15 @@
 import { NextResponse } from "next/server";
 import { getAccessToken } from "@/lib/ezyvet/auth";
 import { getSession } from "@/lib/requireAuth";
-
-const CORS = process.env.ALLOWED_ORIGIN ?? "*";
+import { getCredentialedCorsHeaders } from "@/lib/cors";
 
 export async function GET(req) {
   try {
     const session = getSession(req);
     if (!session) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+      const r = NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+      Object.entries(getCredentialedCorsHeaders(req)).forEach(([k, v]) => r.headers.set(k, v));
+      return r;
     }
 
     const token   = await getAccessToken();
@@ -24,7 +25,9 @@ export async function GET(req) {
     const contact = cData.items?.[0]?.contact ?? cData.contact;
 
     if (!contact) {
-      return NextResponse.json({ error: "Profile not found" }, { status: 404 });
+      const r = NextResponse.json({ error: "Profile not found" }, { status: 404 });
+      Object.entries(getCredentialedCorsHeaders(req)).forEach(([k, v]) => r.headers.set(k, v));
+      return r;
     }
 
     const EMAIL_TYPE = 1, PHONE_TYPE = 3;
@@ -43,22 +46,17 @@ export async function GET(req) {
         phone,
       },
     });
-    r.headers.set("Access-Control-Allow-Origin", CORS);
+    Object.entries(getCredentialedCorsHeaders(req)).forEach(([k, v]) => r.headers.set(k, v));
     return r;
 
   } catch (err) {
     console.error("[/api/auth/me] error:", err);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    const r = NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    Object.entries(getCredentialedCorsHeaders(req)).forEach(([k, v]) => r.headers.set(k, v));
+    return r;
   }
 }
 
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 204,
-    headers: {
-      "Access-Control-Allow-Origin":  CORS,
-      "Access-Control-Allow-Methods": "GET, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-    },
-  });
+export async function OPTIONS(req) {
+  return new NextResponse(null, { status: 204, headers: getCredentialedCorsHeaders(req) });
 }
