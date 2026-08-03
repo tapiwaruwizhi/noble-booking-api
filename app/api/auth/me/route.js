@@ -88,19 +88,19 @@ export async function PATCH(req) {
       if (first_name) payload.first_name = first_name;
       if (last_name)  payload.last_name  = last_name;
 
-      let nameRes  = await fetch(`${base}/v2/contact/${session.contactId}`, {
+      let nameRes  = await fetch(`${base}/v1/contact/${session.contactId}`, {
         method: "PATCH", headers: patchHeaders, body: JSON.stringify(payload),
       });
       let nameText = await nameRes.text();
-      console.log("[/api/auth/me PATCH] name update (v2 PATCH) status:", nameRes.status, nameText);
+      console.log("[/api/auth/me PATCH] name update (v1 PATCH) status:", nameRes.status, nameText);
 
       if (!nameRes.ok && nameText.includes("unknown or unsupported")) {
         console.log("[/api/auth/me PATCH] PATCH unsupported on contact — trying PUT");
-        nameRes  = await fetch(`${base}/v2/contact/${session.contactId}`, {
+        nameRes  = await fetch(`${base}/v1/contact/${session.contactId}`, {
           method: "PUT", headers: jsonHeaders, body: JSON.stringify(payload),
         });
         nameText = await nameRes.text();
-        console.log("[/api/auth/me PATCH] name update (v2 PUT) status:", nameRes.status, nameText);
+        console.log("[/api/auth/me PATCH] name update (v1 PUT) status:", nameRes.status, nameText);
       }
     }
 
