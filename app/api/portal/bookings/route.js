@@ -9,6 +9,7 @@ import { NextResponse } from "next/server";
 import { getAccessToken } from "@/lib/ezyvet/auth";
 import { getSession } from "@/lib/requireAuth";
 import { getCredentialedCorsHeaders } from "@/lib/cors";
+import { getAppointmentStatusMap } from "@/lib/appointmentStatus";
 
 export async function GET(req) {
   try {
@@ -24,6 +25,8 @@ export async function GET(req) {
     const headers = { Authorization: `Bearer ${token}` };
 
     console.log("[/api/portal/bookings] contact_id:", session.contactId);
+
+    const statusMap = await getAppointmentStatusMap(base, headers);
 
     // Reuse the same animal_id fallback strategy as /api/portal/appointments
     const aRes  = await fetch(`${base}/v2/animal?active=1&contact_id=${session.contactId}&limit=50`, { headers });
@@ -43,13 +46,15 @@ export async function GET(req) {
       .filter(a => a.description?.includes("Ref: NVC-"))
       .map(a => {
         const refMatch = a.description.match(/Ref: (NVC-[A-Z0-9]+)/);
+        const statusId = a.appointment_status_id ?? a.status;
         return {
           id:          a.id,
           uid:         a.uid,
           reference:   refMatch ? refMatch[1] : null,
           start_time:  a.start_time,
           end_time:    a.end_time,
-          status:      a.appointment_status_id ?? a.status,
+          status_id:   statusId,
+          status:      statusMap[statusId] ?? "Unknown",
           description: a.description,
           animal_id:   a.animal_id,
         };

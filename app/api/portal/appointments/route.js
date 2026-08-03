@@ -12,18 +12,21 @@ import { NextResponse } from "next/server";
 import { getAccessToken } from "@/lib/ezyvet/auth";
 import { getSession } from "@/lib/requireAuth";
 import { getCredentialedCorsHeaders } from "@/lib/cors";
+import { getAppointmentStatusMap } from "@/lib/appointmentStatus";
 
-function mapAppt(i) {
+function mapAppt(i, statusMap) {
   const a = i.appointment ?? i;
+  const statusId = a.appointment_status_id ?? a.status;
   return {
-    id:          a.id,
-    uid:         a.uid,
-    start_time:  a.start_time,
-    end_time:    a.end_time,
-    status:      a.appointment_status_id ?? a.status,
-    description: a.description,
-    animal_id:   a.animal_id,
-    resource_id: a.resource_id ?? a.provider_id,
+    id:            a.id,
+    uid:           a.uid,
+    start_time:    a.start_time,
+    end_time:      a.end_time,
+    status_id:     statusId,
+    status:        statusMap[statusId] ?? "Unknown",
+    description:   a.description,
+    animal_id:     a.animal_id,
+    resource_id:   a.resource_id ?? a.provider_id,
   };
 }
 
@@ -43,6 +46,8 @@ export async function GET(req) {
     console.log("═══════════════════════════════════════");
     console.log("[/api/portal/appointments] contact_id:", session.contactId);
 
+    const statusMap = await getAppointmentStatusMap(base, headers);
+
     // ── Strategy 1: direct contact_id filter ───────────────────────────────
     const directUrl = `${base}/v2/appointment?contact_id=${session.contactId}&limit=100`;
     console.log("[/api/portal/appointments] Trying direct filter:", directUrl);
@@ -54,7 +59,7 @@ export async function GET(req) {
 
     if (directRes.ok) {
       const directData = JSON.parse(directText);
-      appointments = (directData.items ?? []).map(mapAppt);
+      appointments = (directData.items ?? []).map(i => mapAppt(i, statusMap));
     }
 
     // ── Strategy 2: fallback via animal_id ─────────────────────────────────
@@ -72,7 +77,7 @@ export async function GET(req) {
         const apText = await apRes.text();
         if (!apRes.ok) { console.log("[/api/portal/appointments] animal_id filter failed for", animalId, ":", apText); continue; }
         const apData = JSON.parse(apText);
-        appointments.push(...(apData.items ?? []).map(mapAppt));
+        appointments.push(...(apData.items ?? []).map(i => mapAppt(i, statusMap)));
       }
     }
 
