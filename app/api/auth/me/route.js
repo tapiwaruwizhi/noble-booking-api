@@ -122,6 +122,10 @@ export async function PATCH(req) {
           contact_detail_type_id:  String(PHONE_TYPE),
         };
 
+        console.log(updatePayload)
+        console.log(updatePayload?.value)
+        console.log(updatePayload?.contact_id)
+        console.log(updatePayload?.contact_detail_type_id)
         let updRes  = await fetch(`${base}/v1/contactdetail/${existingPhone.id}`, {
           method: "PATCH", headers: jsonHeaders, body: JSON.stringify(updatePayload),
         });
