@@ -44,7 +44,7 @@ export async function GET(req) {
     console.log("[/api/portal/appointments] contact_id:", session.contactId);
 
     // ── Strategy 1: direct contact_id filter ───────────────────────────────
-    const directUrl = `${base}/v2/appointment?contact_id=${session.contactId}&limit=100&sort=-start_time`;
+    const directUrl = `${base}/v2/appointment?contact_id=${session.contactId}&limit=100`;
     console.log("[/api/portal/appointments] Trying direct filter:", directUrl);
     const directRes  = await fetch(directUrl, { headers });
     const directText = await directRes.text();
@@ -67,15 +67,17 @@ export async function GET(req) {
       console.log("[/api/portal/appointments] Animal IDs:", animalIds);
 
       for (const animalId of animalIds) {
-        const apUrl  = `${base}/v2/appointment?animal_id=${animalId}&limit=50&sort=-start_time`;
+        const apUrl  = `${base}/v2/appointment?animal_id=${animalId}&limit=50`;
         const apRes  = await fetch(apUrl, { headers });
         const apText = await apRes.text();
         if (!apRes.ok) { console.log("[/api/portal/appointments] animal_id filter failed for", animalId, ":", apText); continue; }
         const apData = JSON.parse(apText);
         appointments.push(...(apData.items ?? []).map(mapAppt));
       }
-      appointments.sort((a, b) => (b.start_time ?? 0) - (a.start_time ?? 0));
     }
+
+    // Sort newest-first client-side, since ezyVet's "sort" param isn't accepted here
+    appointments.sort((a, b) => (b.start_time ?? 0) - (a.start_time ?? 0));
 
     console.log("[/api/portal/appointments] ✓ Found", appointments.length, "appointments");
     console.log("═══════════════════════════════════════");

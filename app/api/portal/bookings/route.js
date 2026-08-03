@@ -32,7 +32,7 @@ export async function GET(req) {
 
     let appointments = [];
     for (const animalId of animalIds) {
-      const apRes  = await fetch(`${base}/v2/appointment?animal_id=${animalId}&limit=50&sort=-start_time`, { headers });
+      const apRes  = await fetch(`${base}/v2/appointment?animal_id=${animalId}&limit=50`, { headers });
       if (!apRes.ok) continue;
       const apData = await apRes.json();
       appointments.push(...(apData.items ?? []).map(i => i.appointment ?? i));
