@@ -76,7 +76,8 @@ export async function PATCH(req) {
     const token    = await getAccessToken();
     const base     = process.env.EZYVET_BASE_URL;
     const headers  = { Authorization: `Bearer ${token}` };
-    const jsonHeaders = { ...headers, "Content-Type": "application/json" };
+    const jsonHeaders  = { ...headers, "Content-Type": "application/json" };
+    const patchHeaders = { ...headers, "Content-Type": "application/merge-patch+json" };
 
     console.log("═══════════════════════════════════════");
     console.log("[/api/auth/me PATCH] contact_id:", session.contactId, "| updates:", { first_name, last_name, phone });
@@ -88,7 +89,7 @@ export async function PATCH(req) {
       if (last_name)  payload.last_name  = last_name;
 
       let nameRes  = await fetch(`${base}/v2/contact/${session.contactId}`, {
-        method: "PATCH", headers: jsonHeaders, body: JSON.stringify(payload),
+        method: "PATCH", headers: patchHeaders, body: JSON.stringify(payload),
       });
       let nameText = await nameRes.text();
       console.log("[/api/auth/me PATCH] name update (v2 PATCH) status:", nameRes.status, nameText);
@@ -122,12 +123,8 @@ export async function PATCH(req) {
           contact_detail_type_id:  String(PHONE_TYPE),
         };
 
-        console.log(updatePayload)
-        console.log(updatePayload?.value)
-        console.log(updatePayload?.contact_id)
-        console.log(updatePayload?.contact_detail_type_id)
         let updRes  = await fetch(`${base}/v1/contactdetail/${existingPhone.id}`, {
-          method: "PATCH", headers: jsonHeaders, body: JSON.stringify(updatePayload),
+          method: "PATCH", headers: patchHeaders, body: JSON.stringify(updatePayload),
         });
         let updText = await updRes.text();
         console.log("[/api/auth/me PATCH] v1 PATCH status:", updRes.status, updText);

@@ -134,7 +134,8 @@ export async function PATCH(req) {
 
     const token   = await getAccessToken();
     const base    = process.env.EZYVET_BASE_URL;
-    const headers = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
+    const headers      = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
+    const patchHeaders = { Authorization: `Bearer ${token}`, "Content-Type": "application/merge-patch+json" };
 
     // ── Ownership check — never let a client edit another client's pet ──────
     const checkRes  = await fetch(`${base}/v2/animal?id=${animal_id}&limit=1`, { headers });
@@ -158,7 +159,7 @@ export async function PATCH(req) {
 
     console.log("[/api/portal/pets PATCH] Updating animal_id:", animal_id, "payload:", JSON.stringify(payload));
 
-    let updRes  = await fetch(`${base}/v2/animal/${animal_id}`, { method: "PATCH", headers, body: JSON.stringify(payload) });
+    let updRes  = await fetch(`${base}/v2/animal/${animal_id}`, { method: "PATCH", headers: patchHeaders, body: JSON.stringify(payload) });
     let updText = await updRes.text();
     console.log("[/api/portal/pets PATCH] v2 PATCH status:", updRes.status, updText);
 
