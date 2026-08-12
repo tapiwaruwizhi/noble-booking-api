@@ -54,11 +54,14 @@ export async function POST(req) {
     );
 
     console.log("[/api/portal/pet-photo] ✓ Uploaded — attachment id:", attachment?.id);
+    if (!attachment?.file_download_url) {
+      console.log("[/api/portal/pet-photo] Note: file_download_url not present in create response (fields:", Object.keys(attachment ?? {}), ") — the frontend refetches the pet list afterward, which uses the confirmed GET listing shape instead.");
+    }
 
     const r = NextResponse.json({
       success:       true,
       attachment_id: attachment?.id,
-      photo_url:     `/api/animal-photo/download?id=${attachment?.id}`,
+      photo_url:     attachment?.file_download_url ? `/api/animal-photo/download?url=${encodeURIComponent(attachment.file_download_url)}` : null,
     });
     Object.entries(corsHeaders).forEach(([k, v]) => r.headers.set(k, v));
     return r;

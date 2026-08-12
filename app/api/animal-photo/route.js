@@ -35,7 +35,7 @@ export async function POST(req) {
     const r = NextResponse.json({
       success: true,
       attachment_id: attachment?.id,
-      photo_url: `/api/animal-photo/download?id=${attachment?.id}`,
+      photo_url: `/api/animal-photo/download?url=${encodeURIComponent(attachment?.file_download_url ?? "")}`,
     });
     r.headers.set("Access-Control-Allow-Origin", CORS);
     return r;
@@ -56,7 +56,7 @@ export async function GET(req) {
     const photo = await getAnimalPhotoAttachment(animalId);
 
     const r = NextResponse.json({
-      photo_url: photo ? `/api/animal-photo/download?id=${photo.id}` : null,
+      photo_url: photo ? `/api/animal-photo/download?url=${encodeURIComponent(photo.file_download_url)}` : null,
     });
     r.headers.set("Access-Control-Allow-Origin", CORS);
     return r;

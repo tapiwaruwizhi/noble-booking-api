@@ -31,7 +31,7 @@ export async function GET(req) {
       let photo_url = null;
       try {
         const attachment = await getAnimalPhotoAttachment(a.id);
-        if (attachment) photo_url = `/api/animal-photo/download?id=${attachment.id}`;
+        if (attachment) photo_url = `/api/animal-photo/download?url=${encodeURIComponent(attachment.file_download_url)}`;
       } catch (err) {
         console.log("[/api/portal/pets] photo lookup failed for animal", a.id, ":", err.message);
       }

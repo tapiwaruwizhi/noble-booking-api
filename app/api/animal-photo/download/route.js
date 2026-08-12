@@ -1,18 +1,20 @@
 // src/app/api/animal-photo/download/route.js
-// GET /api/animal-photo/download?id=X
+// GET /api/animal-photo/download?url=<encoded file_download_url>
 //
 // Proxies the actual image bytes from ezyVet (which requires a bearer token)
 // so the browser can load it as a plain <img src="..."> without auth.
+// Uses the file_download_url ezyVet returns directly on the attachment
+// record — not a reconstructed path.
 
-import { downloadAttachment } from "../../../../lib/ezyvet/attachments";
+import { downloadAttachmentFromUrl } from "../../../../lib/ezyvet/attachments";
 
 export async function GET(req) {
-  const id = new URL(req.url).searchParams.get("id");
-  if (!id) {
-    return new Response("Missing id", { status: 400 });
+  const url = new URL(req.url).searchParams.get("url");
+  if (!url) {
+    return new Response("Missing url", { status: 400 });
   }
 
-  const file = await downloadAttachment(id);
+  const file = await downloadAttachmentFromUrl(decodeURIComponent(url));
   if (!file) {
     return new Response("Not found", { status: 404 });
   }
