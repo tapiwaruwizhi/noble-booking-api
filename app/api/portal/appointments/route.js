@@ -18,6 +18,7 @@ function mapAppt(i, statusMap) {
   const a = i.appointment ?? i;
   const statusId = a.status_id;
   const durationSeconds = a.duration ?? 0; // ezyVet returns duration in SECONDS
+  const refMatch = a.description?.match(/Ref: (NVC-[A-Z0-9]+)/);
   return {
     id:          a.id,
     uid:         a.uid,
@@ -27,6 +28,7 @@ function mapAppt(i, statusMap) {
     status_id:   statusId,
     status:      statusMap[statusId] ?? "Unknown",
     description: a.description,
+    reference:   refMatch ? refMatch[1] : null,  // present only for website bookings
     animal_id:   a.animal_id,
     contact_id:  a.contact_id,
     resource_id: a.resources?.[0]?.id ?? a.sales_resource ?? null,
@@ -86,6 +88,21 @@ export async function GET(req) {
 
     // Sort newest-first client-side, since ezyVet's "sort" param isn't accepted here
     appointments.sort((a, b) => (b.start_time ?? 0) - (a.start_time ?? 0));
+
+    // ── Enrich with vet/resource names (batch lookup, one call per unique id) ─
+    const uniqueResourceIds = [...new Set(appointments.map(a => a.resource_id).filter(Boolean))];
+    const resourceNames = {};
+    await Promise.all(uniqueResourceIds.map(async (rid) => {
+      try {
+        const rRes  = await fetch(`${base}/v2/resource?id=${rid}&limit=1`, { headers });
+        const rData = await rRes.json();
+        const resource = rData.items?.[0]?.resource ?? rData.resource;
+        if (resource) resourceNames[rid] = resource.name;
+      } catch (err) {
+        console.log("[/api/portal/appointments] resource lookup failed for id", rid, ":", err.message);
+      }
+    }));
+    appointments = appointments.map(a => ({ ...a, resource_name: resourceNames[a.resource_id] ?? null }));
 
     console.log("[/api/portal/appointments] ✓ Found", appointments.length, "appointments");
     console.log("═══════════════════════════════════════");

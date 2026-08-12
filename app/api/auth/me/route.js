@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 import { getAccessToken } from "@/lib/ezyvet/auth";
 import { getSession } from "@/lib/requireAuth";
 import { getCredentialedCorsHeaders } from "@/lib/cors";
+import { resolveAddress } from "@/lib/ezyvetAddress";
 
 export async function GET(req) {
   try {
@@ -36,14 +37,33 @@ export async function GET(req) {
     const email = details.find(d => getTypeId(d) === EMAIL_TYPE)?.value ?? "";
     const phone = details.find(d => getTypeId(d) === PHONE_TYPE)?.value ?? "";
 
+    // Postal/physical addresses are separate entities referenced by ID —
+    // resolve both in parallel (best-effort, never blocks the response)
+    const [postal_address, physical_address] = await Promise.all([
+      resolveAddress(base, headers, contact.address_postal),
+      resolveAddress(base, headers, contact.address_physical),
+    ]);
+
+    const dob = contact.date_of_birth ? new Date(contact.date_of_birth * 1000).toISOString().split("T")[0] : null;
+
     const r = NextResponse.json({
       contact: {
-        id:         contact.id,
-        uid:        contact.uid,
-        first_name: contact.first_name,
-        last_name:  contact.last_name,
+        id:            contact.id,
+        uid:           contact.uid,
+        first_name:    contact.first_name,
+        last_name:     contact.last_name,
         email,
         phone,
+        emirates_id:   contact.national_id_number || "",
+        postal_address,
+        physical_address,
+        // "More details" — read-only extras
+        code:           contact.code || null,
+        business_name:  contact.business_name || null,
+        date_of_birth:  dob,
+        passport_number: contact.passport_number || null,
+        stop_credit:    contact.stop_credit || null,
+        website:        contact.website || null,
       },
     });
     Object.entries(getCredentialedCorsHeaders(req)).forEach(([k, v]) => r.headers.set(k, v));
@@ -71,7 +91,7 @@ export async function PATCH(req) {
       return r;
     }
 
-    const { first_name, last_name, phone } = await req.json();
+    const { first_name, last_name, phone, emirates_id } = await req.json();
 
     const token    = await getAccessToken();
     const base     = process.env.EZYVET_BASE_URL;
@@ -80,19 +100,20 @@ export async function PATCH(req) {
     const patchHeaders = { ...headers, "Content-Type": "application/merge-patch+json" };
 
     console.log("═══════════════════════════════════════");
-    console.log("[/api/auth/me PATCH] contact_id:", session.contactId, "| updates:", { first_name, last_name, phone });
+    console.log("[/api/auth/me PATCH] contact_id:", session.contactId, "| updates:", { first_name, last_name, phone, emirates_id });
 
-    // ── Step 1: update name fields on the contact itself, if provided ──────
-    if (first_name || last_name) {
+    // ── Step 1: update name + emirates_id fields on the contact itself ─────
+    if (first_name || last_name || emirates_id !== undefined) {
       const payload = {};
       if (first_name) payload.first_name = first_name;
       if (last_name)  payload.last_name  = last_name;
+      if (emirates_id !== undefined) payload.national_id_number = emirates_id;
 
       let nameRes  = await fetch(`${base}/v1/contact/${session.contactId}`, {
         method: "PATCH", headers: patchHeaders, body: JSON.stringify(payload),
       });
       let nameText = await nameRes.text();
-      console.log("[/api/auth/me PATCH] name update (v1 PATCH) status:", nameRes.status, nameText);
+      console.log("[/api/auth/me PATCH] contact update (v1 PATCH) status:", nameRes.status, nameText);
 
       if (!nameRes.ok && nameText.includes("unknown or unsupported")) {
         console.log("[/api/auth/me PATCH] PATCH unsupported on contact — trying PUT");
@@ -100,7 +121,13 @@ export async function PATCH(req) {
           method: "PUT", headers: jsonHeaders, body: JSON.stringify(payload),
         });
         nameText = await nameRes.text();
-        console.log("[/api/auth/me PATCH] name update (v1 PUT) status:", nameRes.status, nameText);
+        console.log("[/api/auth/me PATCH] contact update (v1 PUT) status:", nameRes.status, nameText);
+      }
+
+      if (!nameRes.ok) {
+        const r = NextResponse.json({ error: "Failed to update profile", detail: nameText }, { status: 502 });
+        Object.entries(corsHeaders).forEach(([k, v]) => r.headers.set(k, v));
+        return r;
       }
     }
 

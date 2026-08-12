@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import { getAccessToken } from "@/lib/ezyvet/auth";
 import { getSession } from "@/lib/requireAuth";
 import { getCredentialedCorsHeaders } from "@/lib/cors";
+import { getAnimalPhotoAttachment } from "@/lib/ezyvet/attachments";
 
 export async function GET(req) {
   try {
@@ -22,25 +23,39 @@ export async function GET(req) {
     const aRes  = await fetch(`${base}/v2/animal?active=1&contact_id=${session.contactId}&limit=50`, { headers });
     const aData = await aRes.json();
 
-    const pets = (aData.items ?? []).map(i => {
+    const pets = await Promise.all((aData.items ?? []).map(async i => {
       const a   = i.animal ?? i;
       const dob = a.date_of_birth ? new Date(a.date_of_birth * 1000) : null;
+
+      // Photo lookup is best-effort — never let it block the pet list from loading
+      let photo_url = null;
+      try {
+        const attachment = await getAnimalPhotoAttachment(a.id);
+        if (attachment) photo_url = `/api/animal-photo/download?id=${attachment.id}`;
+      } catch (err) {
+        console.log("[/api/portal/pets] photo lookup failed for animal", a.id, ":", err.message);
+      }
+
       return {
-        id:            a.id,
-        uid:           a.uid,
-        name:          a.name,
-        species:       a.species_name,
-        species_id:    a.species_id,
-        breed:         a.breed_name,
-        breed_id:      a.breed_id,
-        sex:           a.sex_name,
-        sex_id:        a.sex_id,
-        colour:        a.colour_name,
-        colour_id:     a.animalcolour_id,
+        id:              a.id,
+        uid:             a.uid,
+        name:            a.name,
+        species:         a.species_name,
+        species_id:      a.species_id,
+        breed:           a.breed_name,
+        breed_id:        a.breed_id,
+        sex:             a.sex_name,
+        sex_id:          a.sex_id,
+        colour:          a.colour_name,
+        colour_id:       a.animalcolour_id,
+        microchip_number: a.microchip_number || null,
+        weight:          a.weight || null,
+        weight_unit:     a.weight_unit || "kg",
+        photo_url,
         age:     dob ? `${Math.max(0, Math.floor((Date.now() - dob) / 31_536_000_000))} years` : "Unknown",
         dob:     dob ? dob.toISOString().split("T")[0] : null,
       };
-    });
+    }));
 
     const r = NextResponse.json({ pets });
     Object.entries(getCredentialedCorsHeaders(req)).forEach(([k, v]) => r.headers.set(k, v));
