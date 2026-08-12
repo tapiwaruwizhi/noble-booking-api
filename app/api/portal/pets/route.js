@@ -26,13 +26,17 @@ export async function GET(req) {
       const a   = i.animal ?? i;
       const dob = a.date_of_birth ? new Date(a.date_of_birth * 1000) : null;
       return {
-        id:      a.id,
-        uid:     a.uid,
-        name:    a.name,
-        species: a.species_name,
-        breed:   a.breed_name,
-        sex:     a.sex_name,
-        colour:  a.colour_name,
+        id:            a.id,
+        uid:           a.uid,
+        name:          a.name,
+        species:       a.species_name,
+        species_id:    a.species_id,
+        breed:         a.breed_name,
+        breed_id:      a.breed_id,
+        sex:           a.sex_name,
+        sex_id:        a.sex_id,
+        colour:        a.colour_name,
+        colour_id:     a.animalcolour_id,
         age:     dob ? `${Math.max(0, Math.floor((Date.now() - dob) / 31_536_000_000))} years` : "Unknown",
         dob:     dob ? dob.toISOString().split("T")[0] : null,
       };
@@ -65,7 +69,7 @@ export async function POST(req) {
       return r;
     }
 
-    const { name, species, breed, sex, colour, dob } = await req.json();
+    const { name, species_id, breed_id, sex_id, colour_id, dob } = await req.json();
     if (!name) {
       const r = NextResponse.json({ error: "name is required" }, { status: 400 });
       Object.entries(corsHeaders).forEach(([k, v]) => r.headers.set(k, v));
@@ -79,13 +83,13 @@ export async function POST(req) {
     const payload = {
       name,
       contact_id: session.contactId,
-      species:    species || "Dog",
-      breed:      breed   || "",
-      sex:        sex     || "",
-      colour:     colour  || "",
       active:     1,
     };
-    if (dob) payload.date_of_birth = Math.floor(new Date(dob).getTime() / 1000);
+    if (species_id) payload.species_id      = Number(species_id);
+    if (breed_id)   payload.breed_id        = Number(breed_id);
+    if (sex_id)     payload.sex_id          = Number(sex_id);
+    if (colour_id)  payload.animalcolour_id = Number(colour_id);
+    if (dob)        payload.date_of_birth   = Math.floor(new Date(dob).getTime() / 1000);
 
     console.log("[/api/portal/pets POST] Creating pet:", JSON.stringify(payload));
 
@@ -125,7 +129,7 @@ export async function PATCH(req) {
       return r;
     }
 
-    const { animal_id, name, species, breed, sex, colour, dob } = await req.json();
+    const { animal_id, name, species_id, breed_id, sex_id, colour_id, dob } = await req.json();
     if (!animal_id) {
       const r = NextResponse.json({ error: "animal_id is required" }, { status: 400 });
       Object.entries(corsHeaders).forEach(([k, v]) => r.headers.set(k, v));
@@ -150,12 +154,12 @@ export async function PATCH(req) {
     }
 
     const payload = {};
-    if (name)    payload.name    = name;
-    if (species) payload.species = species;
-    if (breed !== undefined) payload.breed  = breed;
-    if (sex)     payload.sex     = sex;
-    if (colour !== undefined) payload.colour = colour;
-    if (dob)     payload.date_of_birth = Math.floor(new Date(dob).getTime() / 1000);
+    if (name)       payload.name             = name;
+    if (species_id) payload.species_id       = Number(species_id);
+    if (breed_id)   payload.breed_id         = Number(breed_id);
+    if (sex_id)     payload.sex_id           = Number(sex_id);
+    if (colour_id)  payload.animalcolour_id  = Number(colour_id);
+    if (dob)        payload.date_of_birth    = Math.floor(new Date(dob).getTime() / 1000);
 
     console.log("[/api/portal/pets PATCH] Updating animal_id:", animal_id, "payload:", JSON.stringify(payload));
 
