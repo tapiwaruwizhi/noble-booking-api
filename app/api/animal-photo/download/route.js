@@ -9,15 +9,21 @@
 import { downloadAttachmentFromUrl } from "../../../../lib/ezyvet/attachments";
 
 export async function GET(req) {
-  const url = new URL(req.url).searchParams.get("url");
+  const url = new URL(req.url).searchParams.get("url"); // already decoded by URLSearchParams
   if (!url) {
+    console.log("[/api/animal-photo/download] Missing url param");
     return new Response("Missing url", { status: 400 });
   }
 
-  const file = await downloadAttachmentFromUrl(decodeURIComponent(url));
+  console.log("[/api/animal-photo/download] Fetching:", url);
+
+  const file = await downloadAttachmentFromUrl(url);
   if (!file) {
+    console.log("[/api/animal-photo/download] downloadAttachmentFromUrl returned null — see [attachments] logs above for the actual ezyVet response status");
     return new Response("Not found", { status: 404 });
   }
+
+  console.log("[/api/animal-photo/download] ✓ Got", file.buffer.length, "bytes, content-type:", file.contentType);
 
   return new Response(file.buffer, {
     status: 200,
