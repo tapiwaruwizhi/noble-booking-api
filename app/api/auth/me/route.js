@@ -8,7 +8,7 @@ import { NextResponse } from "next/server";
 import { getAccessToken } from "@/lib/ezyvet/auth";
 import { getSession } from "@/lib/requireAuth";
 import { getCredentialedCorsHeaders } from "@/lib/cors";
-import { resolveAddress, updateAddress } from "@/lib/ezyvetAddress";
+import { resolveAddress } from "@/lib/ezyvetAddress";
 
 export async function GET(req) {
   try {
@@ -95,7 +95,6 @@ export async function PATCH(req) {
     const {
       first_name, last_name, phone, emirates_id,
       date_of_birth, business_name, passport_number, website,
-      postal, physical, // { street_1, street_2, suburb, city, state, postcode }
     } = await req.json();
 
     const token    = await getAccessToken();
@@ -198,35 +197,6 @@ export async function PATCH(req) {
           Object.entries(corsHeaders).forEach(([k, v]) => r.headers.set(k, v));
           return r;
         }
-      }
-    }
-
-    // ── Step 3: update addresses (only if an address record already exists)
-    if (postal || physical) {
-      const cRes  = await fetch(`${base}/v2/contact?id=${session.contactId}&limit=1`, { headers });
-      const cData = await cRes.json();
-      const contact = cData.items?.[0]?.contact ?? cData.contact;
-
-      if (postal && contact?.address_postal) {
-        const result = await updateAddress(base, patchHeaders, jsonHeaders, contact.address_postal, postal);
-        if (!result.ok) {
-          const r = NextResponse.json({ error: "Failed to update postal address", detail: result.text }, { status: 502 });
-          Object.entries(corsHeaders).forEach(([k, v]) => r.headers.set(k, v));
-          return r;
-        }
-      } else if (postal && !contact?.address_postal) {
-        console.log("[/api/auth/me PATCH] No existing postal address record to update — skipping (creating new addresses isn't supported yet)");
-      }
-
-      if (physical && contact?.address_physical) {
-        const result = await updateAddress(base, patchHeaders, jsonHeaders, contact.address_physical, physical);
-        if (!result.ok) {
-          const r = NextResponse.json({ error: "Failed to update physical address", detail: result.text }, { status: 502 });
-          Object.entries(corsHeaders).forEach(([k, v]) => r.headers.set(k, v));
-          return r;
-        }
-      } else if (physical && !contact?.address_physical) {
-        console.log("[/api/auth/me PATCH] No existing physical address record to update — skipping (creating new addresses isn't supported yet)");
       }
     }
 
