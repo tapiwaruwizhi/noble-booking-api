@@ -105,7 +105,7 @@ export async function PATCH(req) {
 
     console.log("═══════════════════════════════════════");
     console.log("[/api/auth/me PATCH] contact_id:", session.contactId);
-    console.log("[/api/auth/me PATCH] updates:", { first_name, last_name, phone, emirates_id, date_of_birth, business_name, passport_number, website, postal, physical });
+    console.log("[/api/auth/me PATCH] updates:", { first_name, last_name, phone, emirates_id, date_of_birth, business_name, passport_number, website });
 
     // ── Step 1: update all direct contact fields in one call ───────────────
     const hasContactFieldUpdate = first_name || last_name || emirates_id !== undefined ||
