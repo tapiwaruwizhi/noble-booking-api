@@ -118,7 +118,6 @@ export async function PATCH(req) {
       if (emirates_id !== undefined)     payload.national_id_number = emirates_id;
       if (business_name !== undefined)   payload.business_name      = business_name;
       if (passport_number !== undefined) payload.passport_number    = passport_number;
-      if (website !== undefined)         payload.website            = website;
       if (date_of_birth) payload.date_of_birth = Math.floor(new Date(date_of_birth).getTime() / 1000);
 
       let contactRes  = await fetch(`${base}/v1/contact/${session.contactId}`, {
