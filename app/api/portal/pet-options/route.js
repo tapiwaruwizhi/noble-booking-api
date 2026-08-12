@@ -48,7 +48,7 @@ export async function GET(req) {
     console.log("[/api/portal/pet-options] species_id filter:", speciesId);
 
     const [species, sexes, colours, breeds] = await Promise.all([
-      fetchList(base, headers, "/v1/species?active=1&limit=100", i => {
+      fetchList(base, headers, "/v1/species?active=1&limit=200", i => {
         const s = i.species ?? i;
         return { id: s.id, name: s.name };
       }),
@@ -61,7 +61,7 @@ export async function GET(req) {
         return { id: c.id, name: c.name };
       }),
       speciesId
-        ? fetchList(base, headers, `/v1/breed?active=1&limit=500&species_id=${speciesId}`, i => {
+        ? fetchList(base, headers, `/v1/breed?active=1&limit=200&species_id=${speciesId}`, i => {
             const b = i.breed ?? i;
             return { id: b.id, name: b.name };
           })
