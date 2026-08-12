@@ -1,12 +1,14 @@
 // src/app/api/auth/me/route.js
-// GET — returns the logged-in contact's profile, or 401 if not logged in.
-// Fetches fresh data from ezyVet each time (not just what's in the session token).
+// GET — returns the logged-in contact's full profile.
+// PATCH — updates any editable profile field (name, phone, emirates_id,
+// date_of_birth, business_name, passport_number, website, and both
+// postal/physical addresses when an address record already exists).
 
 import { NextResponse } from "next/server";
 import { getAccessToken } from "@/lib/ezyvet/auth";
 import { getSession } from "@/lib/requireAuth";
 import { getCredentialedCorsHeaders } from "@/lib/cors";
-import { resolveAddress } from "@/lib/ezyvetAddress";
+import { resolveAddress, updateAddress } from "@/lib/ezyvetAddress";
 
 export async function GET(req) {
   try {
@@ -38,8 +40,8 @@ export async function GET(req) {
     const phone = details.find(d => getTypeId(d) === PHONE_TYPE)?.value ?? "";
 
     // Postal/physical addresses are separate entities referenced by ID —
-    // resolve both in parallel (best-effort, never blocks the response)
-    const [postal_address, physical_address] = await Promise.all([
+    // resolve both in parallel as structured objects (for editable form)
+    const [postal, physical] = await Promise.all([
       resolveAddress(base, headers, contact.address_postal),
       resolveAddress(base, headers, contact.address_physical),
     ]);
@@ -55,15 +57,17 @@ export async function GET(req) {
         email,
         phone,
         emirates_id:   contact.national_id_number || "",
-        postal_address,
-        physical_address,
-        // "More details" — read-only extras
-        code:           contact.code || null,
-        business_name:  contact.business_name || null,
-        date_of_birth:  dob,
-        passport_number: contact.passport_number || null,
-        stop_credit:    contact.stop_credit || null,
-        website:        contact.website || null,
+        code:            contact.code || null,
+        business_name:   contact.business_name || "",
+        date_of_birth:   dob,
+        passport_number: contact.passport_number || "",
+        stop_credit:     contact.stop_credit || null,
+        website:         contact.website || "",
+        postal_address:    postal?.display   || null,
+        physical_address:  physical?.display || null,
+        // Structured — used to pre-fill the editable address form
+        postal:   postal   || { id: null, street_1: "", street_2: "", suburb: "", city: "", state: "", postcode: "" },
+        physical: physical || { id: null, street_1: "", street_2: "", suburb: "", city: "", state: "", postcode: "" },
       },
     });
     Object.entries(getCredentialedCorsHeaders(req)).forEach(([k, v]) => r.headers.set(k, v));
@@ -77,10 +81,7 @@ export async function GET(req) {
   }
 }
 
-// ── PATCH — update profile fields (first_name, last_name, phone) ───────────
-// Phone is stored as a separate contactdetail record (type_id 3), not a
-// plain field on the contact — so this upserts that record: updates it if
-// one already exists, creates a new one if not.
+// ── PATCH — update any editable profile field ───────────────────────────────
 export async function PATCH(req) {
   const corsHeaders = getCredentialedCorsHeaders(req);
   try {
@@ -91,7 +92,11 @@ export async function PATCH(req) {
       return r;
     }
 
-    const { first_name, last_name, phone, emirates_id } = await req.json();
+    const {
+      first_name, last_name, phone, emirates_id,
+      date_of_birth, business_name, passport_number, website,
+      postal, physical, // { street_1, street_2, suburb, city, state, postcode }
+    } = await req.json();
 
     const token    = await getAccessToken();
     const base     = process.env.EZYVET_BASE_URL;
@@ -100,32 +105,40 @@ export async function PATCH(req) {
     const patchHeaders = { ...headers, "Content-Type": "application/merge-patch+json" };
 
     console.log("═══════════════════════════════════════");
-    console.log("[/api/auth/me PATCH] contact_id:", session.contactId, "| updates:", { first_name, last_name, phone, emirates_id });
+    console.log("[/api/auth/me PATCH] contact_id:", session.contactId);
+    console.log("[/api/auth/me PATCH] updates:", { first_name, last_name, phone, emirates_id, date_of_birth, business_name, passport_number, website, postal, physical });
 
-    // ── Step 1: update name + emirates_id fields on the contact itself ─────
-    if (first_name || last_name || emirates_id !== undefined) {
+    // ── Step 1: update all direct contact fields in one call ───────────────
+    const hasContactFieldUpdate = first_name || last_name || emirates_id !== undefined ||
+      date_of_birth !== undefined || business_name !== undefined || passport_number !== undefined || website !== undefined;
+
+    if (hasContactFieldUpdate) {
       const payload = {};
-      if (first_name) payload.first_name = first_name;
-      if (last_name)  payload.last_name  = last_name;
-      if (emirates_id !== undefined) payload.national_id_number = emirates_id;
+      if (first_name)      payload.first_name = first_name;
+      if (last_name)       payload.last_name  = last_name;
+      if (emirates_id !== undefined)     payload.national_id_number = emirates_id;
+      if (business_name !== undefined)   payload.business_name      = business_name;
+      if (passport_number !== undefined) payload.passport_number    = passport_number;
+      if (website !== undefined)         payload.website            = website;
+      if (date_of_birth) payload.date_of_birth = Math.floor(new Date(date_of_birth).getTime() / 1000);
 
-      let nameRes  = await fetch(`${base}/v1/contact/${session.contactId}`, {
+      let contactRes  = await fetch(`${base}/v1/contact/${session.contactId}`, {
         method: "PATCH", headers: patchHeaders, body: JSON.stringify(payload),
       });
-      let nameText = await nameRes.text();
-      console.log("[/api/auth/me PATCH] contact update (v1 PATCH) status:", nameRes.status, nameText);
+      let contactText = await contactRes.text();
+      console.log("[/api/auth/me PATCH] contact update (v1 PATCH) status:", contactRes.status, contactText);
 
-      if (!nameRes.ok && nameText.includes("unknown or unsupported")) {
+      if (!contactRes.ok && contactText.includes("unknown or unsupported")) {
         console.log("[/api/auth/me PATCH] PATCH unsupported on contact — trying PUT");
-        nameRes  = await fetch(`${base}/v1/contact/${session.contactId}`, {
+        contactRes  = await fetch(`${base}/v1/contact/${session.contactId}`, {
           method: "PUT", headers: jsonHeaders, body: JSON.stringify(payload),
         });
-        nameText = await nameRes.text();
-        console.log("[/api/auth/me PATCH] contact update (v1 PUT) status:", nameRes.status, nameText);
+        contactText = await contactRes.text();
+        console.log("[/api/auth/me PATCH] contact update (v1 PUT) status:", contactRes.status, contactText);
       }
 
-      if (!nameRes.ok) {
-        const r = NextResponse.json({ error: "Failed to update profile", detail: nameText }, { status: 502 });
+      if (!contactRes.ok) {
+        const r = NextResponse.json({ error: "Failed to update profile", detail: contactText }, { status: 502 });
         Object.entries(corsHeaders).forEach(([k, v]) => r.headers.set(k, v));
         return r;
       }
@@ -142,8 +155,6 @@ export async function PATCH(req) {
       const existingPhone = details.find(d => getTypeId(d) === PHONE_TYPE);
 
       if (existingPhone) {
-        console.log("[/api/auth/me PATCH] Updating existing phone contactdetail id:", existingPhone.id);
-
         const updatePayload = {
           value:                   phone,
           contact_id:              session.contactId,
@@ -154,16 +165,14 @@ export async function PATCH(req) {
           method: "PATCH", headers: patchHeaders, body: JSON.stringify(updatePayload),
         });
         let updText = await updRes.text();
-        console.log("[/api/auth/me PATCH] v1 PATCH status:", updRes.status, updText);
+        console.log("[/api/auth/me PATCH] phone v1 PATCH status:", updRes.status, updText);
 
-        // If PATCH itself isn't a supported method here, try PUT instead
         if (!updRes.ok && updText.includes("unknown or unsupported")) {
-          console.log("[/api/auth/me PATCH] PATCH unsupported — trying PUT instead");
           updRes  = await fetch(`${base}/v1/contactdetail/${existingPhone.id}`, {
             method: "PUT", headers: jsonHeaders, body: JSON.stringify(updatePayload),
           });
           updText = await updRes.text();
-          console.log("[/api/auth/me PATCH] v1 PUT status:", updRes.status, updText);
+          console.log("[/api/auth/me PATCH] phone v1 PUT status:", updRes.status, updText);
         }
 
         if (!updRes.ok) {
@@ -172,7 +181,6 @@ export async function PATCH(req) {
           return r;
         }
       } else {
-        console.log("[/api/auth/me PATCH] No existing phone — creating new contactdetail");
         const createRes  = await fetch(`${base}/v2/contactdetail`, {
           method: "POST", headers: jsonHeaders,
           body: JSON.stringify({
@@ -190,6 +198,35 @@ export async function PATCH(req) {
           Object.entries(corsHeaders).forEach(([k, v]) => r.headers.set(k, v));
           return r;
         }
+      }
+    }
+
+    // ── Step 3: update addresses (only if an address record already exists)
+    if (postal || physical) {
+      const cRes  = await fetch(`${base}/v2/contact?id=${session.contactId}&limit=1`, { headers });
+      const cData = await cRes.json();
+      const contact = cData.items?.[0]?.contact ?? cData.contact;
+
+      if (postal && contact?.address_postal) {
+        const result = await updateAddress(base, patchHeaders, jsonHeaders, contact.address_postal, postal);
+        if (!result.ok) {
+          const r = NextResponse.json({ error: "Failed to update postal address", detail: result.text }, { status: 502 });
+          Object.entries(corsHeaders).forEach(([k, v]) => r.headers.set(k, v));
+          return r;
+        }
+      } else if (postal && !contact?.address_postal) {
+        console.log("[/api/auth/me PATCH] No existing postal address record to update — skipping (creating new addresses isn't supported yet)");
+      }
+
+      if (physical && contact?.address_physical) {
+        const result = await updateAddress(base, patchHeaders, jsonHeaders, contact.address_physical, physical);
+        if (!result.ok) {
+          const r = NextResponse.json({ error: "Failed to update physical address", detail: result.text }, { status: 502 });
+          Object.entries(corsHeaders).forEach(([k, v]) => r.headers.set(k, v));
+          return r;
+        }
+      } else if (physical && !contact?.address_physical) {
+        console.log("[/api/auth/me PATCH] No existing physical address record to update — skipping (creating new addresses isn't supported yet)");
       }
     }
 
