@@ -102,7 +102,7 @@ export async function POST(req) {
       };
       console.log("[/api/book] Animal payload:", JSON.stringify(animalPayload));
 
-      const aRes  = await fetch(`${base}/v2/animal`, {
+      const aRes  = await fetch(`${base}/v1/animal`, {
         method: "POST", headers: authJson,
         body: JSON.stringify(animalPayload),
       });

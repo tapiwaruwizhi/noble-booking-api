@@ -89,7 +89,7 @@ export async function POST(req) {
 
     console.log("[/api/portal/pets POST] Creating pet:", JSON.stringify(payload));
 
-    const aRes  = await fetch(`${base}/v2/animal`, { method: "POST", headers, body: JSON.stringify(payload) });
+    const aRes  = await fetch(`${base}/v1/animal`, { method: "POST", headers, body: JSON.stringify(payload) });
     const aText = await aRes.text();
     console.log("[/api/portal/pets POST] status:", aRes.status, aText);
 
@@ -159,15 +159,15 @@ export async function PATCH(req) {
 
     console.log("[/api/portal/pets PATCH] Updating animal_id:", animal_id, "payload:", JSON.stringify(payload));
 
-    let updRes  = await fetch(`${base}/v2/animal/${animal_id}`, { method: "PATCH", headers: patchHeaders, body: JSON.stringify(payload) });
+    let updRes  = await fetch(`${base}/v1/animal/${animal_id}`, { method: "PATCH", headers: patchHeaders, body: JSON.stringify(payload) });
     let updText = await updRes.text();
-    console.log("[/api/portal/pets PATCH] v2 PATCH status:", updRes.status, updText);
+    console.log("[/api/portal/pets PATCH] v1 PATCH status:", updRes.status, updText);
 
     if (!updRes.ok && updText.includes("unknown or unsupported")) {
       console.log("[/api/portal/pets PATCH] PATCH unsupported — trying PUT");
-      updRes  = await fetch(`${base}/v2/animal/${animal_id}`, { method: "PUT", headers, body: JSON.stringify(payload) });
+      updRes  = await fetch(`${base}/v1/animal/${animal_id}`, { method: "PUT", headers, body: JSON.stringify(payload) });
       updText = await updRes.text();
-      console.log("[/api/portal/pets PATCH] v2 PUT status:", updRes.status, updText);
+      console.log("[/api/portal/pets PATCH] v1 PUT status:", updRes.status, updText);
     }
 
     if (!updRes.ok) {
