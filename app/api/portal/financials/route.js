@@ -62,6 +62,7 @@ export async function GET(req) {
       return {
         id:            inv.id,
         date:          inv.invoice_date ?? inv.created_at ?? null,
+        due_date:      inv.due_date ?? null,
         total:         Number(inv.total ?? inv.amount ?? 0),
         amount_paid:   Number(inv.amount_paid ?? inv.paid ?? 0),
         amount_owing:  Number(inv.amount_owing ?? inv.balance ?? Math.max(0, Number(inv.total ?? 0) - Number(inv.amount_paid ?? 0))),
@@ -73,6 +74,12 @@ export async function GET(req) {
     const currentBalance   = mapped.reduce((sum, inv) => sum + (inv.amount_owing || 0), 0);
     const totalPaidLifetime = mapped.reduce((sum, inv) => sum + (inv.amount_paid || 0), 0);
 
+    // Pending payments — any invoice with an outstanding balance, oldest first
+    // (typically what a client most needs to see and act on)
+    const pendingPayments = mapped
+      .filter(inv => inv.amount_owing > 0)
+      .sort((a, b) => (a.due_date ?? a.date ?? 0) - (b.due_date ?? b.date ?? 0));
+
     // "Previous spending" — total paid in the last 12 months, as a
     // reasonably useful default breakdown; adjust once real data confirms field names
     const oneYearAgo = Math.floor(Date.now() / 1000) - 365 * 24 * 60 * 60;
@@ -80,13 +87,14 @@ export async function GET(req) {
       .filter(inv => inv.date && inv.date >= oneYearAgo)
       .reduce((sum, inv) => sum + (inv.amount_paid || 0), 0);
 
-    console.log("[/api/portal/financials] ✓ balance:", currentBalance, "| lifetime paid:", totalPaidLifetime, "| last 12mo:", previousSpending);
+    console.log("[/api/portal/financials] ✓ balance:", currentBalance, "| pending count:", pendingPayments.length, "| lifetime paid:", totalPaidLifetime, "| last 12mo:", previousSpending);
     console.log("═══════════════════════════════════════");
 
     const r = NextResponse.json({
       current_balance:    currentBalance,
       total_paid_lifetime: totalPaidLifetime,
       previous_spending_12mo: previousSpending,
+      pending_payments: pendingPayments,
       invoices: mapped.slice(0, 25), // recent transactions for the table
       endpoint_used: usedEndpoint,   // surfaced for debugging — remove once confirmed stable
     });
