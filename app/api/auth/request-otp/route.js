@@ -2,8 +2,9 @@
 // POST { identifier: "email or phone" }
 //
 // Looks up the contact in ezyVet, generates a 6-digit code, stores it
-// temporarily, and "sends" it (currently a console-log stub — see
-// src/lib/otp.js sendOtp() for where to wire a real email/SMS provider).
+// temporarily, and sends it — by real email via Resend when the identifier
+// is an email address (see lib/email.js), or logged to the console as a
+// fallback (and always for phone/SMS, which isn't wired up yet).
 //
 // SECURITY NOTE: always returns { sent: true } regardless of whether the
 // contact was found, to avoid leaking which emails/phones are registered
@@ -83,7 +84,7 @@ export async function POST(req) {
       firstName:  contact.first_name,
       email:      emailMode ? val : null,
     });
-    await sendOtp(val, code, emailMode);
+    await sendOtp(val, code, emailMode, contact.first_name);
 
     console.log("[/api/auth/request-otp] ✓ OTP issued for contact_id:", contactId);
     console.log("═══════════════════════════════════════");

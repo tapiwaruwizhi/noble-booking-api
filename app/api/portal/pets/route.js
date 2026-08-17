@@ -22,9 +22,43 @@ export async function GET(req) {
 
     const aRes  = await fetch(`${base}/v2/animal?active=1&contact_id=${session.contactId}&limit=50`, { headers });
     const aData = await aRes.json();
+    const animals = (aData.items ?? []).map(i => i.animal ?? i);
 
-    const pets = await Promise.all((aData.items ?? []).map(async i => {
-      const a   = i.animal ?? i;
+    // ezyVet's animal record only carries species_id / breed_id / sex_id / animalcolour_id —
+    // no *_name fields — so resolve human-readable labels from the lookup tables.
+    // Species/sex/colour are small closed lists; breed is looked up per unique ID actually in use.
+    const fetchLookupList = async (path, mapFn) => {
+      try {
+        const res  = await fetch(`${base}${path}`, { headers });
+        if (!res.ok) return [];
+        const data = await res.json();
+        return (data.items ?? []).map(mapFn).filter(Boolean);
+      } catch (err) {
+        console.log("[/api/portal/pets] lookup failed:", path, err.message);
+        return [];
+      }
+    };
+    const toMap = (list) => new Map(list.map((x) => [String(x.id), x.name]));
+
+    const uniqueBreedIds = [...new Set(animals.map((a) => a.breed_id).filter(Boolean))];
+
+    const [speciesList, sexList, colourList, breedLists] = await Promise.all([
+      fetchLookupList("/v1/species?active=1&limit=200", (i) => ({ id: (i.species ?? i).id, name: (i.species ?? i).name })),
+      fetchLookupList("/v1/sex?active=1&limit=50", (i) => ({ id: (i.sex ?? i).id, name: (i.sex ?? i).name })),
+      fetchLookupList("/v1/animalcolour?active=1&limit=200", (i) => ({ id: (i.animalcolour ?? i).id, name: (i.animalcolour ?? i).name })),
+      Promise.all(
+        uniqueBreedIds.map((id) =>
+          fetchLookupList(`/v1/breed?id=${id}&limit=1`, (i) => ({ id: (i.breed ?? i).id, name: (i.breed ?? i).name }))
+        )
+      ),
+    ]);
+
+    const speciesMap = toMap(speciesList);
+    const sexMap     = toMap(sexList);
+    const colourMap  = toMap(colourList);
+    const breedMap   = toMap(breedLists.flat());
+
+    const pets = await Promise.all(animals.map(async a => {
       const dob = a.date_of_birth ? new Date(a.date_of_birth * 1000) : null;
 
       // Photo lookup is best-effort — never let it block the pet list from loading
@@ -40,13 +74,13 @@ export async function GET(req) {
         id:              a.id,
         uid:             a.uid,
         name:            a.name,
-        species:         a.species_name,
+        species:         speciesMap.get(String(a.species_id)) || a.species_name || null,
         species_id:      a.species_id,
-        breed:           a.breed_name,
+        breed:           breedMap.get(String(a.breed_id)) || a.breed_name || null,
         breed_id:        a.breed_id,
-        sex:             a.sex_name,
+        sex:             sexMap.get(String(a.sex_id)) || a.sex_name || null,
         sex_id:          a.sex_id,
-        colour:          a.colour_name,
+        colour:          colourMap.get(String(a.animalcolour_id)) || a.colour_name || null,
         colour_id:       a.animalcolour_id,
         microchip_number: a.microchip_number || null,
         weight:          a.weight || null,
