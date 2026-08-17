@@ -2,7 +2,7 @@
 // POST { appointment_id, start_iso, duration_minutes? } — moves an appointment
 // belonging to the logged-in contact to a new start time.
 //
-// This directly updates the ezyVet appointment's start_at/duration rather than
+// This directly updates the ezyVet appointment's start_time/duration rather than
 // cancelling + rebooking through ezyCAB — simpler and preserves the same
 // appointment record (reference, history, etc). It does not (yet) run a live
 // availability check against the vet's calendar before saving — the frontend
@@ -62,8 +62,8 @@ export async function POST(req) {
       : (existing.duration ?? 900); // fall back to the existing duration (seconds)
 
     const payload = {
-      start_at: Math.floor(newStart.getTime() / 1000),
-      duration: durationSeconds,
+      start_time: Math.floor(newStart.getTime() / 1000),
+      duration:   durationSeconds,
     };
 
     console.log("[/api/portal/appointments/reschedule] Rescheduling appointment_id:", appointment_id, "→", JSON.stringify(payload));
