@@ -71,21 +71,32 @@ export async function POST(req) {
     // Parses + logs ezyVet's error shape ({ level, type, text, fields }) in a
     // readable way, instead of just dumping the raw response text — `fields`
     // in particular carries the actual reason a write was rejected.
+    //
+    // The exact envelope ezyVet wraps this in isn't confirmed (could be the
+    // object directly, or nested under `errors[0]` / `error` / an array) —
+    // so this tries the likely shapes defensively AND always logs the full
+    // raw text too, so nothing is lost if none of the guesses match.
     const logEzyvetError = (label, status, text) => {
+      console.error(`[/api/portal/appointments/reschedule] ${label} — status:`, status, "| raw:", text);
+      let err = null;
       try {
         const parsed = JSON.parse(text);
-        const err = Array.isArray(parsed) ? parsed[0] : parsed;
-        console.error(
-          `[/api/portal/appointments/reschedule] ${label} — status:`, status,
-          "| type:", err?.type,
-          "| text:", err?.text,
-          "| fields:", JSON.stringify(err?.fields ?? []),
-        );
-        return err;
+        err = Array.isArray(parsed) ? parsed[0]
+            : parsed?.errors?.[0] ?? parsed?.error?.[0] ?? parsed?.error ?? parsed;
       } catch {
-        console.error(`[/api/portal/appointments/reschedule] ${label} — status:`, status, "| raw:", text);
         return null;
       }
+      if (err && (err.type || err.text || err.fields)) {
+        console.error(
+          `[/api/portal/appointments/reschedule] ${label} — parsed`,
+          "| type:", err.type,
+          "| text:", err.text,
+          "| fields:", JSON.stringify(err.fields ?? []),
+        );
+      } else {
+        console.error(`[/api/portal/appointments/reschedule] ${label} — parsed but shape unrecognized:`, JSON.stringify(err));
+      }
+      return err;
     };
 
     let updRes  = await fetch(`${base}/v1/appointment/${appointment_id}`, { method: "PATCH", headers: patchHeaders, body: JSON.stringify(payload) });
