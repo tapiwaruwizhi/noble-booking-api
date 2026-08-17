@@ -244,8 +244,11 @@ const css = `
   .nvc-nextcard b { display: block; font-family: ${serif}; font-weight: 400; font-size: 25px; margin-bottom: 6px; }
   .nvc-nextcard span { display: block; font-size: 14.5px; opacity: .9; }
   .nvc-nextcard .acts { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
-  .nvc-nextcard .acts button { padding: 10px 18px; border-radius: 999px; font-size: 13.5px; font-weight: 500; background: rgba(255,255,255,.18); color: #fff; border: none; }
-  .nvc-nextcard .acts button.w { background: #fff; color: ${T.blue}; }
+  .nvc-nextcard .acts button, .nvc-nextcard .acts a { display: inline-flex; align-items: center; justify-content: center; padding: 10px 18px; border-radius: 999px; font-size: 13.5px; font-weight: 500; background: rgba(255,255,255,.18); color: #fff; border: none; text-decoration: none; cursor: pointer; }
+  .nvc-nextcard .acts button:hover, .nvc-nextcard .acts a:hover { background: rgba(255,255,255,.28); }
+  .nvc-nextcard .acts button.w, .nvc-nextcard .acts a.w { background: #fff; color: ${T.blue}; }
+  .nvc-nextcard .acts button.w:hover, .nvc-nextcard .acts a.w:hover { background: ${T.blueWash}; }
+  .nvc-nextcard .acts button:disabled { opacity: .5; pointer-events: none; }
 
   .nvc-petgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
   @media(max-width: 760px) { .nvc-petgrid { grid-template-columns: 1fr 1fr; } }

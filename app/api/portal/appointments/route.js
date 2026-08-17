@@ -13,7 +13,7 @@ import { getAccessToken } from "@/lib/ezyvet/auth";
 import { getSession } from "@/lib/requireAuth";
 import { getCredentialedCorsHeaders } from "@/lib/cors";
 import { getAppointmentStatusMap } from "@/lib/appointmentStatus";
-import { getBranch, directionsUrl } from "@/lib/branches";
+import { getBranch, getDirectionsUrl } from "@/lib/branches";
 
 function mapAppt(i, statusMap) {
   const a = i.appointment ?? i;
@@ -137,7 +137,7 @@ export async function GET(req) {
         resource_uid:     res.uid ?? null,
         separation_id:    res.separationId ?? null,
         location_address: branch.address,
-        directions_url:   directionsUrl(branch.address),
+        directions_url:   getDirectionsUrl(branch),
         appt_type_uid:    apptTypeUid,
         // "Reschedule" can offer a live availability check only once we have both
         // the resource and appointment-type UID; otherwise the frontend falls
