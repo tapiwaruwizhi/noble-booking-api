@@ -7,6 +7,31 @@ import { getSession } from "@/lib/requireAuth";
 import { getCredentialedCorsHeaders } from "@/lib/cors";
 import { getAnimalPhotoAttachment } from "@/lib/ezyvet/attachments";
 
+// Formats a date of birth as a human-readable age: years+months once >= 1 year,
+// months alone once >= 1 month but under a year, and days once under a month.
+function formatAge(dob) {
+  if (!dob) return "Unknown";
+  const now = new Date();
+  if (dob > now) return "Unknown";
+
+  let years  = now.getFullYear() - dob.getFullYear();
+  let months = now.getMonth() - dob.getMonth();
+  if (now.getDate() < dob.getDate()) months -= 1;
+  if (months < 0) { years -= 1; months += 12; }
+
+  const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+  if (years >= 1) {
+    return months > 0 ? `${plural(years, "year")} ${plural(months, "month")}` : plural(years, "year");
+  }
+  if (months >= 1) {
+    return plural(months, "month");
+  }
+
+  const days = Math.max(0, Math.floor((now - dob) / 86_400_000));
+  return plural(days, "day");
+}
+
 export async function GET(req) {
   try {
     const session = getSession(req);
@@ -86,7 +111,7 @@ export async function GET(req) {
         weight:          a.weight || null,
         weight_unit:     a.weight_unit || "kg",
         photo_url,
-        age:     dob ? `${Math.max(0, Math.floor((Date.now() - dob) / 31_536_000_000))} years` : "Unknown",
+        age:     formatAge(dob),
         dob:     dob ? dob.toISOString().split("T")[0] : null,
       };
     }));
