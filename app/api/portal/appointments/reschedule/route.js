@@ -68,19 +68,44 @@ export async function POST(req) {
 
     console.log("[/api/portal/appointments/reschedule] Rescheduling appointment_id:", appointment_id, "→", JSON.stringify(payload));
 
+    // Parses + logs ezyVet's error shape ({ level, type, text, fields }) in a
+    // readable way, instead of just dumping the raw response text — `fields`
+    // in particular carries the actual reason a write was rejected.
+    const logEzyvetError = (label, status, text) => {
+      try {
+        const parsed = JSON.parse(text);
+        const err = Array.isArray(parsed) ? parsed[0] : parsed;
+        console.error(
+          `[/api/portal/appointments/reschedule] ${label} — status:`, status,
+          "| type:", err?.type,
+          "| text:", err?.text,
+          "| fields:", JSON.stringify(err?.fields ?? []),
+        );
+        return err;
+      } catch {
+        console.error(`[/api/portal/appointments/reschedule] ${label} — status:`, status, "| raw:", text);
+        return null;
+      }
+    };
+
     let updRes  = await fetch(`${base}/v1/appointment/${appointment_id}`, { method: "PATCH", headers: patchHeaders, body: JSON.stringify(payload) });
     let updText = await updRes.text();
-    console.log("[/api/portal/appointments/reschedule] v1 PATCH status:", updRes.status, updText);
+    let updErr  = updRes.ok ? null : logEzyvetError("v1 PATCH failed", updRes.status, updText);
+    if (updRes.ok) console.log("[/api/portal/appointments/reschedule] v1 PATCH status:", updRes.status, updText);
 
-    if (!updRes.ok && updText.includes("unknown or unsupported")) {
+    if (!updRes.ok && updErr?.type !== "InternalException" && updText.includes("unknown or unsupported")) {
       console.log("[/api/portal/appointments/reschedule] PATCH unsupported — trying PUT");
       updRes  = await fetch(`${base}/v1/appointment/${appointment_id}`, { method: "PUT", headers: jsonHeaders, body: JSON.stringify(payload) });
       updText = await updRes.text();
-      console.log("[/api/portal/appointments/reschedule] v1 PUT status:", updRes.status, updText);
+      updErr  = updRes.ok ? null : logEzyvetError("v1 PUT failed", updRes.status, updText);
+      if (updRes.ok) console.log("[/api/portal/appointments/reschedule] v1 PUT status:", updRes.status, updText);
     }
 
     if (!updRes.ok) {
-      const r = NextResponse.json({ error: "Failed to reschedule appointment", detail: updText }, { status: 502 });
+      const r = NextResponse.json({
+        error:  "Failed to reschedule appointment",
+        detail: updErr ?? updText,
+      }, { status: 502 });
       Object.entries(corsHeaders).forEach(([k, v]) => r.headers.set(k, v));
       return r;
     }
