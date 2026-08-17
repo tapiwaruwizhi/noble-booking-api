@@ -1800,7 +1800,7 @@ function AccountPortal({ onBackToBooking }) {
                             <div style={{ fontSize: 12, color: T.muted, marginBottom: 10 }}>{maskEmail(pendingProfile?.email)}</div>
                             {confirmPets && confirmPets.length > 0 && (
                                 <>
-                                    <div
+                                    <diva
                                         style={{
                                             fontSize: 11,
                                             fontWeight: 700,
