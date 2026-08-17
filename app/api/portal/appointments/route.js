@@ -13,6 +13,7 @@ import { getAccessToken } from "@/lib/ezyvet/auth";
 import { getSession } from "@/lib/requireAuth";
 import { getCredentialedCorsHeaders } from "@/lib/cors";
 import { getAppointmentStatusMap } from "@/lib/appointmentStatus";
+import { getBranch, directionsUrl } from "@/lib/branches";
 
 function mapAppt(i, statusMap) {
   const a = i.appointment ?? i;
@@ -32,6 +33,9 @@ function mapAppt(i, statusMap) {
     animal_id:   a.animal_id,
     contact_id:  a.contact_id,
     resource_id: a.resources?.[0]?.id ?? a.sales_resource ?? null,
+    // Field name for appointment type isn't confirmed against live data — try the
+    // likely candidates defensively, same pattern used elsewhere in this codebase.
+    appt_type_id_raw: a.type_id ?? a.appointment_type_id ?? a.type ?? null,
   };
 }
 
@@ -89,20 +93,58 @@ export async function GET(req) {
     // Sort newest-first client-side, since ezyVet's "sort" param isn't accepted here
     appointments.sort((a, b) => (b.start_time ?? 0) - (a.start_time ?? 0));
 
-    // ── Enrich with vet/resource names (batch lookup, one call per unique id) ─
+    // ── Enrich with vet/resource names + branch (batch lookup, one call per unique id) ─
     const uniqueResourceIds = [...new Set(appointments.map(a => a.resource_id).filter(Boolean))];
-    const resourceNames = {};
+    const resourceInfo = {};
     await Promise.all(uniqueResourceIds.map(async (rid) => {
       try {
         const rRes  = await fetch(`${base}/v2/resource?id=${rid}&limit=1`, { headers });
         const rData = await rRes.json();
         const resource = rData.items?.[0]?.resource ?? rData.resource;
-        if (resource) resourceNames[rid] = resource.name;
+        if (resource) {
+          resourceInfo[rid] = {
+            name:         resource.name,
+            uid:          resource.uid,
+            separationId: resource.ownership_id ?? null,
+          };
+        }
       } catch (err) {
         console.log("[/api/portal/appointments] resource lookup failed for id", rid, ":", err.message);
       }
     }));
-    appointments = appointments.map(a => ({ ...a, resource_name: resourceNames[a.resource_id] ?? null }));
+
+    // ── Best-effort appointment-type UID resolution (needed for slot-checked reschedule) ─
+    const uniqueTypeIds = [...new Set(appointments.map(a => a.appt_type_id_raw).filter(Boolean))];
+    const typeUids = {};
+    await Promise.all(uniqueTypeIds.map(async (tid) => {
+      try {
+        const tRes  = await fetch(`${base}/v2/appointmenttype?id=${tid}&limit=1`, { headers });
+        const tData = await tRes.json();
+        const type = tData.items?.[0]?.appointmenttype ?? tData.appointmenttype;
+        if (type) typeUids[tid] = type.uid;
+      } catch (err) {
+        console.log("[/api/portal/appointments] appointment type lookup failed for id", tid, ":", err.message);
+      }
+    }));
+
+    appointments = appointments.map(a => {
+      const res    = resourceInfo[a.resource_id] ?? {};
+      const branch = getBranch(res.separationId);
+      const apptTypeUid = typeUids[a.appt_type_id_raw] ?? null;
+      return {
+        ...a,
+        resource_name:    res.name ?? null,
+        resource_uid:     res.uid ?? null,
+        separation_id:    res.separationId ?? null,
+        location_address: branch.address,
+        directions_url:   directionsUrl(branch.address),
+        appt_type_uid:    apptTypeUid,
+        // "Reschedule" can offer a live availability check only once we have both
+        // the resource and appointment-type UID; otherwise the frontend falls
+        // back to a plain time-request flow.
+        slot_check_available: Boolean(res.uid && apptTypeUid),
+      };
+    });
 
     console.log("[/api/portal/appointments] ✓ Found", appointments.length, "appointments");
     console.log("═══════════════════════════════════════");

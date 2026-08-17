@@ -8,6 +8,7 @@
 import { NextResponse } from "next/server";
 import { getAccessToken } from "@/lib/ezyvet/auth";
 import { list } from "@vercel/blob";
+import { getBranch } from "@/lib/branches";
 
 const CORS = process.env.ALLOWED_ORIGIN ?? "*";
 
@@ -18,60 +19,6 @@ const NON_BOOKABLE = [
 ];
 const isBookable = (name = "") =>
   !NON_BOOKABLE.some((kw) => name.toLowerCase().includes(kw));
-
-// ── Branch map keyed by separation ID ────────────────────────────────────────
-// realName = Noble Vet's public branch name (shown in UI prefix)
-// ezyVet separation name is kept and shown in brackets after e.g. "(Department A)"
-const BRANCH_MAP = {
-  1:  {
-    realName: "Dubai Investment Park (DIP)",
-    photo:    "https://framerusercontent.com/images/q3jxUlzjD51IaA8fkPDpE8TdGI.webp?width=800",
-    address:  "Retail #5, Al Merdas Building, Green Community, DIP 1",
-    hours:    "8am – 9pm daily",
-  },
-  4:  {
-    realName: "Jumeirah",
-    photo:    "https://framerusercontent.com/images/lqrR41VkWauKj02z17JplcKOs.webp?width=800",
-    address:  "Villa 63 Umm Al Sheif St, Jumeirah 3, Dubai",
-    hours:    "Mon–Fri 8am–8pm · Sat–Sun 9am–6pm",
-  },
-  5:  {
-    realName: "Jumeirah Lake Towers (JLT)",
-    photo:    "https://framerusercontent.com/images/hPLBXv621QKLaSk5kWzR88tvB9k.webp?width=800",
-    address:  "Retail R3A, Lake Point Tower, Cluster N, JLT",
-    hours:    "10am – 7pm daily",
-  },
-  9:  {
-    realName: "Sports City",
-    photo:    "https://framerusercontent.com/images/TV5pz7Ult5uD58sxDq18jVWDDI.webp?width=800",
-    address:  "Shop 1, Canal Residence West, Dubai Sports City",
-    hours:    "Call for hours",
-  },
-  11: {
-    realName: "Sustainable City",
-    photo:    "https://framerusercontent.com/images/Om0XtUe6bUMiRMKb0bfUkXGPjCo.webp?width=800",
-    address:  "Sustainable City Plaza, Off Al Qudra Rd, Dubailand",
-    hours:    "Call for hours",
-  },
-  13: {
-    realName: "Dubai Investment Park (DIP)",
-    photo:    "https://framerusercontent.com/images/q3jxUlzjD51IaA8fkPDpE8TdGI.webp?width=800",
-    address:  "Retail #5, Al Merdas Building, Green Community, DIP 1",
-    hours:    "8am – 9pm daily",
-  },
-  // Add production separation IDs here when going live
-};
-
-const FALLBACK_BRANCH = {
-  realName: null,
-  photo:    null, // replaced by Vercel Blob "locations/default.jpg" at runtime — see getBlobOverrides
-  address:  "Dubai, UAE",
-  hours:    "Call +971 600 566 253",
-};
-
-function getBranch(id) {
-  return BRANCH_MAP[id] ?? FALLBACK_BRANCH;
-}
 
 // Format display name: "Jumeirah (Department A)" or just ezyVet name if no mapping
 function getDisplayName(realName, ezyvetName) {

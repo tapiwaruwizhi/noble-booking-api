@@ -1266,7 +1266,89 @@ function AccountPortal({ onBackToBooking }) {
     const [consultId, setConsultId] = useState(null)
     const [petConsults, setPetConsults] = useState({})
 
+    const [cancellingId, setCancellingId] = useState(null)
+    const [rescheduleModal, setRescheduleModal] = useState(null) // the appointment being rescheduled
+    const [rescheduleDate, setRescheduleDate] = useState("")
+    const [rescheduleSlots, setRescheduleSlots] = useState(null)
+    const [rescheduleSlotsLoading, setRescheduleSlotsLoading] = useState(false)
+    const [rescheduleManualTime, setRescheduleManualTime] = useState("")
+    const [rescheduleSaving, setRescheduleSaving] = useState(false)
+    const [rescheduleError, setRescheduleError] = useState("")
+
     const [toast, showToast] = useToast()
+
+    const refreshAppointments = () => {
+        fetch(`${API_BASE}/api/portal/appointments`, { credentials: "include" })
+            .then((r) => r.json())
+            .then((d) => setAppointments(d.appointments || []))
+            .catch(() => {})
+    }
+
+    const handleCancelAppointment = async (appointmentId) => {
+        if (!window.confirm("Cancel this appointment?")) return
+        setCancellingId(appointmentId)
+        try {
+            const res = await fetch(`${API_BASE}/api/portal/appointments/cancel`, {
+                method: "POST",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ appointment_id: appointmentId }),
+            })
+            if (!res.ok) throw new Error()
+            showToast("Appointment cancelled.")
+            refreshAppointments()
+        } catch {
+            showToast("Couldn't cancel that appointment — please call the clinic.")
+        } finally {
+            setCancellingId(null)
+        }
+    }
+
+    const openReschedule = (appt) => {
+        setRescheduleModal(appt)
+        setRescheduleError("")
+        setRescheduleManualTime("")
+        setRescheduleSlots(null)
+        const d = new Date((appt.start_time ?? Date.now() / 1000) * 1000)
+        setRescheduleDate(d.toISOString().split("T")[0])
+    }
+
+    useEffect(() => {
+        if (!rescheduleModal || !rescheduleDate || !rescheduleModal.slot_check_available) return
+        setRescheduleSlotsLoading(true)
+        setRescheduleSlots(null)
+        fetch(`${API_BASE}/api/slots?date=${rescheduleDate}&appt_type_uid=${rescheduleModal.appt_type_uid}&resource_uid=${rescheduleModal.resource_uid}&duration=${rescheduleModal.duration_minutes || 30}`)
+            .then((r) => r.json())
+            .then((d) => setRescheduleSlots(d.slots || []))
+            .catch(() => setRescheduleSlots([]))
+            .finally(() => setRescheduleSlotsLoading(false))
+    }, [rescheduleModal, rescheduleDate])
+
+    const submitReschedule = async (startIso) => {
+        if (!rescheduleModal) return
+        setRescheduleSaving(true)
+        setRescheduleError("")
+        try {
+            const res = await fetch(`${API_BASE}/api/portal/appointments/reschedule`, {
+                method: "POST",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    appointment_id: rescheduleModal.id,
+                    start_iso: startIso,
+                    duration_minutes: rescheduleModal.duration_minutes,
+                }),
+            })
+            if (!res.ok) throw new Error()
+            showToast("Appointment rescheduled.")
+            setRescheduleModal(null)
+            refreshAppointments()
+        } catch {
+            setRescheduleError("Couldn't save that time — please try again or call the clinic.")
+        } finally {
+            setRescheduleSaving(false)
+        }
+    }
 
     useEffect(() => {
         fetch(`${API_BASE}/api/auth/me`, { credentials: "include" })
@@ -1916,12 +1998,19 @@ function AccountPortal({ onBackToBooking }) {
                                         <span>Loading…</span>
                                     ) : homeNextAppt ? (
                                         <>
-                                            <b>{homeNextAppt.description || "Appointment"}</b>
+                                            <b>{[pets?.find((p) => p.id === homeNextAppt.animal_id)?.name, homeNextAppt.description || "Appointment"].filter(Boolean).join(" · ")}</b>
                                             <span>{fmtDate(homeNextAppt.start_time)}, {fmtTime(homeNextAppt.start_time)}</span>
-                                            {homeNextAppt.resource_name && <span>{homeNextAppt.resource_name}</span>}
+                                            {(homeNextAppt.resource_name || homeNextAppt.location_address) && (
+                                                <span>{[homeNextAppt.resource_name, homeNextAppt.location_address].filter(Boolean).join(" · ")}</span>
+                                            )}
                                             <div className="acts">
-                                                <button className="w" onClick={onBackToBooking}>Book another</button>
-                                                <button onClick={() => setSection("bookings")}>View bookings</button>
+                                                {homeNextAppt.directions_url && (
+                                                    <a className="w" href={homeNextAppt.directions_url} target="_blank" rel="noreferrer">Directions</a>
+                                                )}
+                                                <button onClick={() => openReschedule(homeNextAppt)}>Reschedule</button>
+                                                <button onClick={() => handleCancelAppointment(homeNextAppt.id)} disabled={cancellingId === homeNextAppt.id}>
+                                                    {cancellingId === homeNextAppt.id ? "Cancelling…" : "Cancel"}
+                                                </button>
                                             </div>
                                         </>
                                     ) : (
@@ -2414,6 +2503,22 @@ function AccountPortal({ onBackToBooking }) {
                                                                 <div style={{ padding: "10px 4px" }}>
                                                                     <div><strong>Reason:</strong> {a.description || "—"}</div>
                                                                     <div><strong>Pet:</strong> {pets?.find((p) => p.id === a.animal_id)?.name || "—"}</div>
+                                                                    {a.location_address && <div><strong>Location:</strong> {a.location_address}</div>}
+                                                                    {bookingsSubTab === "upcoming" && !/cancel/i.test(a.status || "") && (
+                                                                        <div style={{ display: "flex", gap: 10, marginTop: 12, flexWrap: "wrap" }} onClick={(e) => e.stopPropagation()}>
+                                                                            {a.directions_url && (
+                                                                                <a className="nvc-btn out sm" href={a.directions_url} target="_blank" rel="noreferrer">Directions</a>
+                                                                            )}
+                                                                            <button className="nvc-btn out sm" onClick={() => openReschedule(a)}>Reschedule</button>
+                                                                            <button
+                                                                                className="nvc-btn out sm"
+                                                                                onClick={() => handleCancelAppointment(a.id)}
+                                                                                disabled={cancellingId === a.id}
+                                                                            >
+                                                                                {cancellingId === a.id ? "Cancelling…" : "Cancel"}
+                                                                            </button>
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                             </td>
                                                         </tr>
@@ -2519,6 +2624,77 @@ function AccountPortal({ onBackToBooking }) {
                     </button>
                 ))}
             </nav>
+
+            {rescheduleModal && (
+                <Modal onClose={() => setRescheduleModal(null)}>
+                    <button className="nvc-modal-close" onClick={() => setRescheduleModal(null)}>×</button>
+                    <div className="nvc-modal-title">Reschedule appointment</div>
+                    <div style={{ height: 4 }} />
+                    <p style={{ color: T.muted, fontSize: 14, margin: "0 0 16px" }}>
+                        {rescheduleModal.description || "Appointment"} · currently {fmtDate(rescheduleModal.start_time)}, {fmtTime(rescheduleModal.start_time)}
+                    </p>
+
+                    <div className="nvc-form-field">
+                        <label>New date</label>
+                        <input
+                            className="nvc-input"
+                            type="date"
+                            min={new Date().toISOString().split("T")[0]}
+                            value={rescheduleDate}
+                            onChange={(e) => setRescheduleDate(e.target.value)}
+                        />
+                    </div>
+
+                    {rescheduleModal.slot_check_available ? (
+                        <div style={{ marginTop: 14 }}>
+                            <label style={{ fontSize: 13, fontWeight: 600, color: T.ink, display: "block", marginBottom: 8 }}>Available times</label>
+                            {rescheduleSlotsLoading ? (
+                                <div className="nvc-portal-empty">Loading times…</div>
+                            ) : !rescheduleSlots || rescheduleSlots.length === 0 ? (
+                                <div className="nvc-portal-empty">No available times that day — try another date.</div>
+                            ) : (
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                                    {rescheduleSlots.map((s) => (
+                                        <button
+                                            key={s.start_iso}
+                                            className="nvc-btn out sm"
+                                            disabled={rescheduleSaving}
+                                            onClick={() => submitReschedule(s.start_iso)}
+                                        >
+                                            {s.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <>
+                            <div className="nvc-form-field" style={{ marginTop: 14 }}>
+                                <label>New time</label>
+                                <input
+                                    className="nvc-input"
+                                    type="time"
+                                    value={rescheduleManualTime}
+                                    onChange={(e) => setRescheduleManualTime(e.target.value)}
+                                />
+                            </div>
+                            <p style={{ color: T.muted, fontSize: 12.5, margin: "6px 0 0" }}>
+                                We'll request this time and the clinic will confirm it's available.
+                            </p>
+                            <button
+                                className="nvc-btn full"
+                                style={{ marginTop: 16 }}
+                                disabled={!rescheduleDate || !rescheduleManualTime || rescheduleSaving}
+                                onClick={() => submitReschedule(`${rescheduleDate}T${rescheduleManualTime}:00`)}
+                            >
+                                {rescheduleSaving ? "Saving…" : "Request this time"}
+                            </button>
+                        </>
+                    )}
+
+                    {rescheduleError && <p style={{ color: T.urgent, fontSize: 13.5, marginTop: 12 }}>{rescheduleError}</p>}
+                </Modal>
+            )}
 
             {petModal && (
                 <Modal onClose={() => setPetModal(null)}>
