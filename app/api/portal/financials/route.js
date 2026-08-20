@@ -1,16 +1,54 @@
 // src/app/api/portal/financials/route.js
-// GET — returns current balance, historical spending, and recent invoices
-// for the logged-in contact.
+// GET — current balance, spending history and recent invoices for the
+// logged-in contact.
 //
-// NOTE: exact field names for ezyVet's invoice endpoint aren't confirmed
-// against your sandbox yet. This tries /v2/invoice first, falls back to
-// /v1/invoice, and logs the raw response either way so field names can be
-// adjusted the same way we iterated on contact/appointment/animal earlier.
+// ── Status ─────────────────────────────────────────────────────────────────
+// The `read-invoice` scope is now granted (see lib/ezyvet/auth.js), so this can
+// finally talk to the real invoice resource instead of hoping. What is STILL
+// unconfirmed is the response field naming — ezyVet documents both
+// `GET /v1/invoice` and `GET /v2/invoice` but this project has no live sample.
+//
+// So: v2 first, fall back to v1, read every field through `pick()` with ordered
+// candidates, normalise all timestamps to epoch seconds, and log the real shape
+// of the first record on each deploy. After one live request the Vercel logs
+// will show the actual key names and this can be tightened to them.
+// (Same discipline as the animal `species_name` bug — never assume.)
 
 import { NextResponse } from "next/server";
 import { getAccessToken } from "@/lib/ezyvet/auth";
 import { getSession } from "@/lib/requireAuth";
 import { getCredentialedCorsHeaders } from "@/lib/cors";
+import { logRecordShape, unwrap, pick, pickNumber, toEpochSeconds } from "@/lib/ezyvet/shape";
+
+const YEAR = 365 * 24 * 60 * 60;
+
+/** Treats an invoice as settled if nothing is owing on it. */
+function mapInvoice(raw) {
+  const inv = unwrap(raw, "invoice");
+
+  const total = pickNumber(inv, ["total", "total_incl_tax", "amount", "invoice_total", "grand_total"], 0);
+  const paid  = pickNumber(inv, ["amount_paid", "paid", "total_paid", "payment_total"], 0);
+
+  // Prefer an explicit balance field; only derive when the API doesn't give one,
+  // since a derived balance silently hides partial-payment/credit-note logic.
+  const explicitOwing = pick(inv, ["amount_owing", "balance", "amount_due", "outstanding"], null);
+  const owing = explicitOwing !== null
+    ? Number(explicitOwing) || 0
+    : Math.max(0, total - paid);
+
+  return {
+    id:           pick(inv, ["id"]),
+    number:       pick(inv, ["number", "invoice_number", "reference", "code"]),
+    date:         toEpochSeconds(pick(inv, ["invoice_date", "created_at", "date", "issued_at"])),
+    due_date:     toEpochSeconds(pick(inv, ["due_date", "date_due", "payment_due_at"])),
+    total,
+    amount_paid:  paid,
+    amount_owing: owing,
+    status:       pick(inv, ["status_name", "status", "state"]),
+    description:  pick(inv, ["description", "reference", "comments", "notes"]),
+    animal_id:    pick(inv, ["animal_id"]),
+  };
+}
 
 export async function GET(req) {
   const corsHeaders = getCredentialedCorsHeaders(req);
@@ -29,74 +67,70 @@ export async function GET(req) {
     console.log("═══════════════════════════════════════");
     console.log("[/api/portal/financials] contact_id:", session.contactId);
 
-    let invoices = [];
+    let rows = [];
     let usedEndpoint = null;
+    let scopeOk = true;
 
-    // ── Try v2/invoice first ────────────────────────────────────────────────
-    const v2Url = `${base}/v2/invoice?contact_id=${session.contactId}&limit=100`;
-    const v2Res  = await fetch(v2Url, { headers });
-    const v2Text = await v2Res.text();
-    console.log("[/api/portal/financials] v2/invoice status:", v2Res.status);
+    // ── v2 first, then v1 ───────────────────────────────────────────────────
+    for (const version of ["v2", "v1"]) {
+      const url = `${base}/${version}/invoice?contact_id=${session.contactId}&limit=200`;
+      const res  = await fetch(url, { headers });
+      const text = await res.text();
+      console.log(`[/api/portal/financials] ${version}/invoice status:`, res.status);
 
-    if (v2Res.ok) {
-      const v2Data = JSON.parse(v2Text);
-      invoices = v2Data.items ?? [];
-      usedEndpoint = "v2";
-    } else {
-      console.log("[/api/portal/financials] v2/invoice failed:", v2Text, "— trying v1");
-      const v1Url = `${base}/v1/invoice?contact_id=${session.contactId}&limit=100`;
-      const v1Res  = await fetch(v1Url, { headers });
-      const v1Text = await v1Res.text();
-      console.log("[/api/portal/financials] v1/invoice status:", v1Res.status, v1Text.slice(0, 500));
-      if (v1Res.ok) {
-        const v1Data = JSON.parse(v1Text);
-        invoices = v1Data.items ?? [];
-        usedEndpoint = "v1";
+      if (res.ok) {
+        try {
+          rows = JSON.parse(text).items ?? [];
+          usedEndpoint = version;
+          break;
+        } catch {
+          console.log(`[/api/portal/financials] ${version}/invoice returned non-JSON:`, text.slice(0, 300));
+        }
+      } else {
+        // 401/403 on BOTH versions means the scope isn't actually granted on
+        // this site config, even though the token issued fine.
+        if (res.status === 401 || res.status === 403) scopeOk = false;
+        console.log(`[/api/portal/financials] ${version}/invoice failed:`, text.slice(0, 300));
       }
     }
 
-    console.log("[/api/portal/financials] endpoint used:", usedEndpoint, "| invoice count:", invoices.length);
+    if (rows.length) logRecordShape("/api/portal/financials", unwrap(rows[0], "invoice"));
+    console.log("[/api/portal/financials] endpoint used:", usedEndpoint, "| invoice count:", rows.length, "| scope_ok:", scopeOk);
 
-    const mapped = invoices.map(i => {
-      const inv = i.invoice ?? i;
-      return {
-        id:            inv.id,
-        date:          inv.invoice_date ?? inv.created_at ?? null,
-        due_date:      inv.due_date ?? null,
-        total:         Number(inv.total ?? inv.amount ?? 0),
-        amount_paid:   Number(inv.amount_paid ?? inv.paid ?? 0),
-        amount_owing:  Number(inv.amount_owing ?? inv.balance ?? Math.max(0, Number(inv.total ?? 0) - Number(inv.amount_paid ?? 0))),
-        status:        inv.status_name ?? inv.status ?? null,
-        description:   inv.description ?? inv.reference ?? null,
-      };
-    }).sort((a, b) => (b.date ?? 0) - (a.date ?? 0));
+    const invoices = rows.map(mapInvoice).sort((a, b) => (b.date ?? 0) - (a.date ?? 0));
 
-    const currentBalance   = mapped.reduce((sum, inv) => sum + (inv.amount_owing || 0), 0);
-    const totalPaidLifetime = mapped.reduce((sum, inv) => sum + (inv.amount_paid || 0), 0);
+    const currentBalance     = invoices.reduce((sum, i) => sum + (i.amount_owing || 0), 0);
+    const totalPaidLifetime  = invoices.reduce((sum, i) => sum + (i.amount_paid  || 0), 0);
 
-    // Pending payments — any invoice with an outstanding balance, oldest first
-    // (typically what a client most needs to see and act on)
-    const pendingPayments = mapped
-      .filter(inv => inv.amount_owing > 0)
+    // Outstanding invoices, oldest first — this is the list a client most needs
+    // to act on, so surfacing the longest-overdue at the top is the useful order.
+    const pendingPayments = invoices
+      .filter((i) => i.amount_owing > 0)
       .sort((a, b) => (a.due_date ?? a.date ?? 0) - (b.due_date ?? b.date ?? 0));
 
-    // "Previous spending" — total paid in the last 12 months, as a
-    // reasonably useful default breakdown; adjust once real data confirms field names
-    const oneYearAgo = Math.floor(Date.now() / 1000) - 365 * 24 * 60 * 60;
-    const previousSpending = mapped
-      .filter(inv => inv.date && inv.date >= oneYearAgo)
-      .reduce((sum, inv) => sum + (inv.amount_paid || 0), 0);
+    const oneYearAgo = Math.floor(Date.now() / 1000) - YEAR;
+    const previousSpending = invoices
+      .filter((i) => i.date && i.date >= oneYearAgo)
+      .reduce((sum, i) => sum + (i.amount_paid || 0), 0);
 
-    console.log("[/api/portal/financials] ✓ balance:", currentBalance, "| pending count:", pendingPayments.length, "| lifetime paid:", totalPaidLifetime, "| last 12mo:", previousSpending);
+    console.log(
+      "[/api/portal/financials] ✓ balance:", currentBalance,
+      "| pending:", pendingPayments.length,
+      "| lifetime paid:", totalPaidLifetime,
+      "| last 12mo:", previousSpending
+    );
     console.log("═══════════════════════════════════════");
 
     const r = NextResponse.json({
-      current_balance:    currentBalance,
-      total_paid_lifetime: totalPaidLifetime,
+      current_balance:        currentBalance,
+      total_paid_lifetime:    totalPaidLifetime,
       previous_spending_12mo: previousSpending,
-      pending_payments: pendingPayments,
-      invoices: mapped.slice(0, 25), // recent transactions for the table
-      endpoint_used: usedEndpoint,   // surfaced for debugging — remove once confirmed stable
+      pending_payments:       pendingPayments,
+      invoices:               invoices.slice(0, 25),
+      // Debug surface — lets the frontend distinguish "no invoices" from
+      // "couldn't read invoices". Drop once the shape is confirmed.
+      endpoint_used: usedEndpoint,
+      scope_ok:      scopeOk,
     });
     Object.entries(corsHeaders).forEach(([k, v]) => r.headers.set(k, v));
     return r;
