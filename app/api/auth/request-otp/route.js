@@ -10,8 +10,32 @@ import { getCredentialedCorsHeaders } from "@/lib/cors";
 
 export async function POST(req) {
   try {
-    const { identifier, code } = await req.json();
+    // Parse defensively: an empty or non-JSON body used to throw and surface as
+    // a generic 500, which hid the real problem. Now it falls through to the
+    // 400 below with diagnostics attached.
+    const payload = await req.json().catch(() => null);
+    const { identifier, code } = payload ?? {};
+
     if (!identifier || !code) {
+      // This guard fired with no logging for a long time, which made
+      // "identifier and code are required" impossible to diagnose from the
+      // Vercel logs — you couldn't tell a malformed request from a missing
+      // field from a client sending nothing at all. Log the SHAPE of what
+      // arrived (never the code itself — it's a short-lived credential).
+      console.warn("[/api/auth/verify-otp] 400 — rejected request:", JSON.stringify({
+        body_parsed:        payload !== null,
+        body_keys:          payload ? Object.keys(payload) : null,
+        identifier_present: Boolean(identifier),
+        identifier_type:    typeof identifier,
+        code_present:       Boolean(code),
+        code_type:          typeof code,
+        code_length:        typeof code === "string" ? code.length : null,
+        content_type:       req.headers.get("content-type"),
+        // No Origin => a native app (RN sends none). A URL => the web portal.
+        origin:             req.headers.get("origin") ?? "(none — native app or server-to-server)",
+        user_agent:         (req.headers.get("user-agent") || "").slice(0, 90),
+      }));
+
       const r = NextResponse.json({ error: "identifier and code are required" }, { status: 400 });
       Object.entries(getCredentialedCorsHeaders(req)).forEach(([k, v]) => r.headers.set(k, v));
       return r;
