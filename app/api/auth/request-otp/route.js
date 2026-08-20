@@ -1,100 +1,64 @@
-// src/app/api/auth/request-otp/route.js
-// POST { identifier: "email or phone" }
+// src/app/api/auth/verify-otp/route.js
+// POST { identifier, code }
 //
-// Looks up the contact in ezyVet, generates a 6-digit code, stores it
-// temporarily, and sends it — by real email via Resend when the identifier
-// is an email address (see lib/email.js), or logged to the console as a
-// fallback (and always for phone/SMS, which isn't wired up yet).
-//
-// SECURITY NOTE: always returns { sent: true } regardless of whether the
-// contact was found, to avoid leaking which emails/phones are registered
-// clients (enumeration protection).
+// Verifies the OTP code and, if valid, issues a signed session cookie.
 
 import { NextResponse } from "next/server";
-import { getAccessToken } from "@/lib/ezyvet/auth";
-import { generateCode, storeOtp, sendOtp } from "@/lib/otp";
+import { verifyOtp } from "@/lib/otp";
+import { createSessionToken, SESSION_COOKIE_NAME, SESSION_MAX_AGE } from "@/lib/session";
 import { getCredentialedCorsHeaders } from "@/lib/cors";
-
-
-const isEmail = (v) => /\S+@\S+\.\S+/.test(v);
-const normalizePhone = (v = "") => v.replace(/[\s\-().+]/g, "");
 
 export async function POST(req) {
   try {
-    const { identifier } = await req.json();
-    if (!identifier || typeof identifier !== "string") {
-      const r = NextResponse.json({ error: "identifier is required" }, { status: 400 });
+    const { identifier, code } = await req.json();
+    if (!identifier || !code) {
+      const r = NextResponse.json({ error: "identifier and code are required" }, { status: 400 });
       Object.entries(getCredentialedCorsHeaders(req)).forEach(([k, v]) => r.headers.set(k, v));
       return r;
     }
 
-    const val = identifier.trim();
-    const emailMode = isEmail(val);
+    console.log("[/api/auth/verify-otp] Verifying code for:", identifier);
 
-    console.log("═══════════════════════════════════════");
-    console.log("[/api/auth/request-otp] identifier:", val, "| type:", emailMode ? "email" : "phone");
-
-    const token   = await getAccessToken();
-    const base    = process.env.EZYVET_BASE_URL;
-    const headers = { Authorization: `Bearer ${token}` };
-
-    // ── Look up contact via contactdetail (same pattern as /api/contact) ────
-    const cdRes  = await fetch(`${base}/v1/contactdetail?active=1&value=${encodeURIComponent(val)}&limit=10`, { headers });
-    const cdText = await cdRes.text();
-    console.log("[/api/auth/request-otp] contactdetail status:", cdRes.status);
-
-    let contactId = null;
-    if (cdRes.ok) {
-      const cdData = JSON.parse(cdText);
-      const expectedType = emailMode ? "1" : "3";
-      const match = (cdData.items ?? []).find(i => {
-        const d = i.contactdetail ?? i;
-        const typeId = String(d.contact_detail_type_id ?? d.type_id ?? "");
-        if (typeId !== expectedType) return false;
-        if (emailMode) return d.value?.trim().toLowerCase() === val.toLowerCase();
-        return normalizePhone(d.value) === normalizePhone(val);
-      });
-      if (match) contactId = (match.contactdetail ?? match).contact_id;
-    }
-
-    if (!contactId) {
-      console.log("[/api/auth/request-otp] No contact found — returning generic success (anti-enumeration)");
-      console.log("═══════════════════════════════════════");
-      const r = NextResponse.json({ sent: true });
+    const contactData = await verifyOtp(identifier.trim(), code.trim());
+    if (!contactData) {
+      console.log("[/api/auth/verify-otp] ✗ Invalid or expired code");
+      const r = NextResponse.json({ error: "Invalid or expired code" }, { status: 401 });
       Object.entries(getCredentialedCorsHeaders(req)).forEach(([k, v]) => r.headers.set(k, v));
       return r;
     }
 
-    // ── Fetch contact via v2 (for uid) ──────────────────────────────────────
-    const cRes  = await fetch(`${base}/v2/contact?id=${contactId}&limit=1`, { headers });
-    const cData = await cRes.json();
-    const contact = cData.items?.[0]?.contact ?? cData.contact;
-
-    if (!contact) {
-      console.log("[/api/auth/request-otp] Contact record fetch failed — returning generic success");
-      const r = NextResponse.json({ sent: true });
-      Object.entries(getCredentialedCorsHeaders(req)).forEach(([k, v]) => r.headers.set(k, v));
-      return r;
-    }
-
-    const code = generateCode();
-    await storeOtp(val, code, {
-      contactId:  contact.id,
-      contactUid: contact.uid,
-      firstName:  contact.first_name,
-      email:      emailMode ? val : null,
+    const token = createSessionToken({
+      contactId:  contactData.contactId,
+      contactUid: contactData.contactUid,
+      email:      contactData.email,
+      firstName:  contactData.firstName,
     });
-    await sendOtp(val, code, emailMode, contact.first_name);
 
-    console.log("[/api/auth/request-otp] ✓ OTP issued for contact_id:", contactId);
-    console.log("═══════════════════════════════════════");
+    console.log("[/api/auth/verify-otp] ✓ Session created for contact_id:", contactData.contactId);
 
-    const r = NextResponse.json({ sent: true });
+    // The token is returned in the body as well as set as a cookie.
+    // Web ignores `token` and keeps using the httpOnly cookie; the React Native
+    // app has no cookie jar, so it stores this in expo-secure-store and sends it
+    // as `Authorization: Bearer`. Same token, same signature, same expiry —
+    // see lib/requireAuth.js.
+    const r = NextResponse.json({
+      success:   true,
+      firstName: contactData.firstName,
+      token,
+      expires_in: SESSION_MAX_AGE,
+    });
+    r.cookies.set(SESSION_COOKIE_NAME, token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+      maxAge: SESSION_MAX_AGE,
+      path: "/",
+    });
     Object.entries(getCredentialedCorsHeaders(req)).forEach(([k, v]) => r.headers.set(k, v));
     return r;
 
   } catch (err) {
-    console.error("[/api/auth/request-otp] error:", err);
+    console.error("[/api/auth/verify-otp] error:", err);
     const r = NextResponse.json({ error: "Internal server error" }, { status: 500 });
     Object.entries(getCredentialedCorsHeaders(req)).forEach(([k, v]) => r.headers.set(k, v));
     return r;
