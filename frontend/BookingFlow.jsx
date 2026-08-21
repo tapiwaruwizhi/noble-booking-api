@@ -471,7 +471,25 @@ const STEPS = [
 
 const EMOJI = { Dog: "🐕", Cat: "🐈", Rabbit: "🐇", Bird: "🦜", Other: "🐾" }
 const REASON_ICONS = ["🩺", "💉", "🦷", "✂️", "👁️", "🔍"]
-const isEmail = (v) => /\S+@\S+\.\S+/.test(v)
+// WHATWG/HTML5 `<input type="email">` production, plus two additions:
+// a dot is REQUIRED in the domain (the spec allows intranet hosts like
+// "ali@dip", which for a public clinic portal is always a typo that makes the
+// OTP silently never arrive), and RFC 5321 length limits (64 local / 254 total)
+// so an over-long address is caught at the field instead of failing delivery.
+// Deliberately no stricter — clever email regexes reject valid addresses
+// (plus-tags, apostrophes, long TLDs) and only a delivered code proves an
+// address works.
+const EMAIL_RE = /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$/
+const isEmail = (v) => {
+    const t = String(v ?? "").trim()
+    if (!t || t.length > 254) return false
+    const at = t.lastIndexOf("@")
+    if (at < 1 || at > 64) return false
+    if (t.includes("..")) return false
+    return EMAIL_RE.test(t)
+}
+// Trim + lowercase so "  Ali@Example.COM " and "ali@example.com" are one account.
+const normalizeEmail = (v) => String(v ?? "").trim().toLowerCase()
 const isPhone = (v) => /^[+\d][\d\s\-().]{6,}$/.test(v)
 
 function initials(name) {
@@ -1468,8 +1486,14 @@ function AccountPortal({ onBackToBooking }) {
     }, [])
 
     const handleRequestOtp = async () => {
-        if (!identifier.trim()) {
-            setError("Please enter your email or phone.")
+        // Normalise first so casing/whitespace can't create a second "account".
+        const value = normalizeEmail(identifier)
+        if (!value) {
+            setError("Please enter your email address.")
+            return
+        }
+        if (!isEmail(value)) {
+            setError("That doesn't look like a valid email address.")
             return
         }
         setError("")
@@ -1484,7 +1508,7 @@ function AccountPortal({ onBackToBooking }) {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 credentials: "include",
-                body: JSON.stringify({ identifier: identifier.trim() }),
+                body: JSON.stringify({ identifier: value }),
             })
             const data = await res.json().catch(() => null)
             if (!res.ok) throw new Error(data?.error || "We couldn't send your code. Please try again.")
@@ -1507,7 +1531,7 @@ function AccountPortal({ onBackToBooking }) {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 credentials: "include",
-                body: JSON.stringify({ identifier: identifier.trim(), code: code.trim() }),
+                body: JSON.stringify({ identifier: normalizeEmail(identifier), code: code.trim() }),
             })
             const data = await res.json()
             if (!res.ok) throw new Error(data.error || "Invalid code")
@@ -1862,14 +1886,19 @@ function AccountPortal({ onBackToBooking }) {
                             {stage === "identifier" ? (
                                 <>
                                     <h2>Sign in</h2>
-                                    <p className="sub">Enter the email or phone number on your Noble account and we'll send you a sign-in code.</p>
+                                    <p className="sub">Enter the email address on your Noble account and we'll send you a sign-in code.</p>
                                     <div className="nvc-form-field">
-                                        <label>Email or phone</label>
+                                        <label>Email address</label>
                                         <input
-                                            className="nvc-input"
+                                            className={`nvc-input ${error ? "error" : ""}`}
+                                            type="email"
+                                            inputMode="email"
+                                            autoComplete="email"
+                                            autoCapitalize="none"
+                                            spellCheck={false}
                                             placeholder="you@example.com"
                                             value={identifier}
-                                            onChange={(e) => setIdentifier(e.target.value)}
+                                            onChange={(e) => { setIdentifier(e.target.value); setError("") }}
                                             onKeyDown={(e) => e.key === "Enter" && agreedToPolicy && handleRequestOtp()}
                                             autoFocus
                                         />
@@ -1891,7 +1920,8 @@ function AccountPortal({ onBackToBooking }) {
                                         {loading ? "Sending…" : "Send me a code"}
                                     </button>
                                     <p className="nvc-auth-fine">
-                                        No password to remember. We'll email or text you a six digit code each time you sign in.
+                                        No password to remember. We'll email you a six digit code each time you sign in —
+                                        or a link to create your account if you're new here.
                                         <br />
                                         Trouble signing in? <a href={CLINIC_WHATSAPP}>Message us on WhatsApp</a>
                                     </p>
@@ -1899,8 +1929,16 @@ function AccountPortal({ onBackToBooking }) {
                             ) : (
                                 <>
                                     <h2>Enter your code</h2>
+                                    {/* /api/auth/request-otp returns { sent: true } whether or not
+                                        the address belongs to a known client — that's what stops it
+                                        being an account-enumeration oracle. So we can't say "a code
+                                        is on its way" with any confidence; describe both outcomes
+                                        instead of promising the one that may not arrive. */}
                                     <p className="sub">
-                                        We sent a 6-digit code to <strong>{identifier}</strong>.
+                                        We've emailed <strong>{identifier}</strong>. If you're already a client
+                                        it's a 6-digit code, valid for 10 minutes. If we don't have a record of
+                                        you yet, it's a link to create your account — open it, sign up, and
+                                        you'll be signed in straight away.
                                     </p>
                                     <div className="nvc-form-field">
                                         <label>Login code</label>

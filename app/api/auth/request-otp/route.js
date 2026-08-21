@@ -6,17 +6,23 @@
 // is an email address (see lib/email.js), or logged to the console as a
 // fallback (and always for phone/SMS, which isn't wired up yet).
 //
-// SECURITY NOTE: always returns { sent: true } regardless of whether the
-// contact was found, to avoid leaking which emails/phones are registered
-// clients (enumeration protection).
+// If NO contact matches, we email a one-time /signup?token=… link instead of
+// a code, so a new client can create an account rather than hitting a dead end.
+//
+// SECURITY NOTE: always returns { sent: true } regardless of which of the two
+// emails went out, to avoid leaking which addresses are registered clients
+// (enumeration protection). The two paths must stay indistinguishable in
+// status code, body and — as far as is practical — timing.
 
 import { NextResponse } from "next/server";
 import { getAccessToken } from "@/lib/ezyvet/auth";
 import { generateCode, storeOtp, sendOtp } from "@/lib/otp";
 import { getCredentialedCorsHeaders } from "@/lib/cors";
+import { isEmail, normalizeEmail, sendSignupLinkEmail } from "@/lib/email";
+import { createSignupToken } from "@/lib/signupToken";
+import { getApiOrigin } from "@/lib/appUrl";
 
 
-const isEmail = (v) => /\S+@\S+\.\S+/.test(v);
 const normalizePhone = (v = "") => v.replace(/[\s\-().+]/g, "");
 
 export async function POST(req) {
@@ -40,8 +46,27 @@ export async function POST(req) {
       return r;
     }
 
-    const val = identifier.trim();
-    const emailMode = isEmail(val);
+    // ── Email only ────────────────────────────────────────────────────────
+    // Sign-in is email-based. SMS delivery has never been implemented (sendOtp
+    // only console-logs for phone numbers), so accepting a phone number here
+    // used to send the client to a "check your messages" screen for a code
+    // that was never going to arrive. Rejecting it up front, with a message
+    // that says why, is the honest behaviour.
+    const val = normalizeEmail(identifier);
+    if (!isEmail(val)) {
+      console.warn("[/api/auth/request-otp] 400 — not an email address:", JSON.stringify({
+        looks_like_phone: /^[+\d][\d\s\-().]{6,}$/.test(String(identifier).trim()),
+        length: String(identifier).trim().length,
+        origin: req.headers.get("origin") ?? "(none — native app)",
+      }));
+      const r = NextResponse.json(
+        { error: "Please enter a valid email address. Sign-in codes are sent by email — call the clinic if we only have your phone number on file." },
+        { status: 400 }
+      );
+      Object.entries(getCredentialedCorsHeaders(req)).forEach(([k, v]) => r.headers.set(k, v));
+      return r;
+    }
+    const emailMode = true;
 
     console.log("═══════════════════════════════════════");
     console.log("[/api/auth/request-otp] identifier:", val, "| type:", emailMode ? "email" : "phone");
@@ -70,7 +95,29 @@ export async function POST(req) {
     }
 
     if (!contactId) {
-      console.log("[/api/auth/request-otp] No contact found — returning generic success (anti-enumeration)");
+      // ── No record of this person → email them a sign-up link ──────────────
+      //
+      // This used to be a dead end: we returned { sent: true } and sent nothing,
+      // so a brand-new client sat on the "enter your code" screen forever. Now
+      // they get a one-time /signup?token=… link instead.
+      //
+      // The RESPONSE BODY IS UNCHANGED on purpose. { sent: true } either way is
+      // what keeps this route from being an account-enumeration oracle — the
+      // caller must not be able to tell "existing client, code sent" from
+      // "new person, signup link sent". Do not add a `new_user: true` flag here
+      // to make the UI nicer; put the explanation in the copy on the code
+      // screen instead ("if we don't recognise your email we've sent you a
+      // link to create an account").
+      console.log("[/api/auth/request-otp] No contact found — sending signup link (anti-enumeration response unchanged)");
+      try {
+        const signupToken = await createSignupToken(val);
+        const link = `${getApiOrigin(req)}/signup?token=${encodeURIComponent(signupToken)}`;
+        await sendSignupLinkEmail(val, link);
+      } catch (err) {
+        // A failed signup email must not turn into a 500 — that would itself
+        // leak "this address is not a client" to anyone watching status codes.
+        console.error("[/api/auth/request-otp] signup link send failed:", err);
+      }
       console.log("═══════════════════════════════════════");
       const r = NextResponse.json({ sent: true });
       Object.entries(getCredentialedCorsHeaders(req)).forEach(([k, v]) => r.headers.set(k, v));
