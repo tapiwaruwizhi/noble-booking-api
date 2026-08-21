@@ -23,6 +23,7 @@ import { getCredentialedCorsHeaders } from "@/lib/cors";
 import { createSessionToken, SESSION_COOKIE_NAME, SESSION_MAX_AGE } from "@/lib/session";
 import { verifySignupToken, isSignupTokenLive, consumeSignupToken } from "@/lib/signupToken";
 import { getPortalUrl } from "@/lib/appUrl";
+import { logRecordShape } from "@/lib/ezyvet/shape";
 
 const EMAIL_TYPE = 1;
 const PHONE_TYPE = 3;
@@ -134,41 +135,63 @@ export async function POST(req) {
       return cors(req, NextResponse.json({ error: "We couldn't reach the clinic's records just now. Please try again in a moment." }, { status: 503 }));
     }
 
-    // ── Create the contact (v2 — v1 doesn't return uid, and the session
-    //    needs one for the v2 reads the portal does) ─────────────────────────
+    // ── Create the contact — v1 ────────────────────────────────────────────
     //
-    // ⚠️ Only send fields you want SET. ezyVet throws InvalidParameterException
-    // on boolean `false` (e.g. is_business: false) — omit instead of negating.
+    // ⚠️ WRITES GO TO v1. **v2 has no POST for contact.** An earlier version of
+    // this route posted to /v2/contact, copied from /api/book — which has the
+    // same bug and has never successfully created a contact live. See §5 of the
+    // project context: "v1 = required for all writes".
+    //
+    // The cost of using v1 is that it does NOT return `uid`, and the portal's
+    // v2 reads need one. So we create on v1, then read the record back on v2
+    // to pick up the uid — which we want to do anyway, to confirm the email
+    // actually attached (see below).
+    // Field names and types below follow ezyVet's published v1 contact-create
+    // schema. Three of them are easy to get wrong, and all three were wrong in
+    // the first version of this route:
+    //
+    //   is_customer               BOOLEAN — `true`, not `1`
+    //   contact_detail_type_id    the nested key is NOT `type_id` (that's what
+    //                             /api/book sends, and it has never created a
+    //                             contact successfully)
+    //   ...and it is a STRING     — "1" / "3", not 1 / 3
+    //
+    // `preferred` is a number. It's set on the email only; `0` is omitted
+    // rather than sent, per the "only send what you want set" rule — ezyVet
+    // throws InvalidParameterException on negated values in several places
+    // (`is_business: false` is the known one), so absent beats falsy.
     const contactPayload = {
       first_name:  firstName,
       last_name:   last,
-      is_customer: 1,
+      is_customer: true,
       contact_detail_list: [
-        { name: "Email",  value: email, type_id: EMAIL_TYPE, preferred: 1 },
-        { name: "Mobile", value: phone, type_id: PHONE_TYPE, preferred: 0 },
+        { name: "Email",  value: email, contact_detail_type_id: String(EMAIL_TYPE), preferred: 1 },
+        { name: "Mobile", value: phone, contact_detail_type_id: String(PHONE_TYPE) },
       ],
     };
 
-    const cRes  = await fetch(`${base}/v2/contact`, {
+    const cRes  = await fetch(`${base}/v1/contact`, {
       method: "POST", headers: authJson, body: JSON.stringify(contactPayload),
     });
     const cText = await cRes.text();
-    console.log("[/api/auth/signup] contact create status:", cRes.status);
+    console.log("[/api/auth/signup] contact create (v1) status:", cRes.status);
 
     if (!cRes.ok) {
       console.error("[/api/auth/signup] contact create failed:", cText.slice(0, 500));
       return cors(req, NextResponse.json({ error: "We couldn't create your account. Please call the clinic and we'll set it up for you." }, { status: 502 }));
     }
 
-    let contact = null;
+    let created = null;
     try {
       const cData = JSON.parse(cText);
-      contact = cData.items?.[0]?.contact ?? cData.contact ?? null;
+      created = cData.items?.[0]?.contact ?? cData.contact ?? null;
     } catch {
       console.error("[/api/auth/signup] contact create returned unparseable body:", cText.slice(0, 300));
     }
+    logRecordShape("[/api/auth/signup] v1 contact create", created);
 
-    if (!contact?.id) {
+    const contactId = created?.id;
+    if (!contactId) {
       // The contact may well have been created — we just can't see its id, so
       // we can't mint a session. Sending them to sign in is correct: the OTP
       // lookup will find whatever was created.
@@ -177,7 +200,74 @@ export async function POST(req) {
       return cors(req, NextResponse.json({ error: "Your account was created, but we couldn't sign you in automatically. Please go back and sign in with your email address." }, { status: 502 }));
     }
 
-    console.log("[/api/auth/signup] ✓ contact created — id:", contact.id, "uid:", contact.uid);
+    // ── Make sure the email actually attached ──────────────────────────────
+    //
+    // This is not defensive padding. `/api/auth/request-otp` finds people by
+    // searching /v1/contactdetail for the email VALUE. If the address didn't
+    // attach to the contact, this person can use the portal right now on the
+    // session we're about to issue — and then never sign in again, with no
+    // sign anything is wrong. So: read back, and fix it if it's missing.
+    const hasDetail = (list, typeId, value) =>
+      (list ?? []).some((d) => {
+        const t = String(d.contact_detail_type_id ?? d.type_id ?? "");
+        return t === String(typeId) && String(d.value ?? "").trim().toLowerCase() === String(value).trim().toLowerCase();
+      });
+
+    async function readBack() {
+      const r = await fetch(`${base}/v2/contact?id=${contactId}&limit=1`, { headers });
+      if (!r.ok) { console.error("[/api/auth/signup] v2 read-back failed:", r.status); return null; }
+      const d = await r.json().catch(() => null);
+      return d?.items?.[0]?.contact ?? d?.contact ?? null;
+    }
+
+    let contact = await readBack();
+
+    if (contact && !hasDetail(contact.contact_detail_list, EMAIL_TYPE, email)) {
+      // Shouldn't happen — the schema says the nested list is supported — but
+      // the consequence of it silently not sticking is an account nobody can
+      // ever sign in to, so it's worth one recovery attempt rather than a
+      // shrug. Same field name and string type as the nested version.
+      console.warn("[/api/auth/signup] detail attach — nested contact_detail_list did NOT stick; creating details explicitly");
+      for (const [typeId, name, value, preferred] of [
+        [EMAIL_TYPE, "Email",  email, 1],
+        [PHONE_TYPE, "Mobile", phone, undefined],
+      ]) {
+        const body = {
+          contact_id: contactId,
+          contact_detail_type_id: String(typeId),
+          name,
+          value,
+          ...(preferred === undefined ? {} : { preferred }),
+        };
+        const dRes = await fetch(`${base}/v1/contactdetail`, {
+          method: "POST", headers: authJson, body: JSON.stringify(body),
+        });
+        if (dRes.ok) console.log(`[/api/auth/signup] detail attach — ${name} created`);
+        else console.error(`[/api/auth/signup] detail attach — ${name} failed:`, dRes.status, (await dRes.text()).slice(0, 300));
+      }
+      contact = await readBack();
+    }
+
+    // If we STILL can't see the email on the record, the account exists but is
+    // unreachable by our own sign-in lookup. Don't pretend that's fine — but
+    // don't lock them out of the session they just earned either. Sign them in
+    // and tell them to call the clinic.
+    if (!contact) {
+      // The record exists (we have its id) but we can't read it back, so we
+      // have no uid and can't tell whether the email attached. Minting a
+      // session on that would be guessing. Signing in resolves both: the OTP
+      // path does its own v2 lookup.
+      console.error("[/api/auth/signup] contact", contactId, "created but not readable on v2 — sending them to sign in");
+      await consumeSignupToken(payload);
+      return cors(req, NextResponse.json({ error: "Your account was created, but we couldn't sign you in automatically. Please go back and sign in with your email address." }, { status: 502 }));
+    }
+
+    const emailAttached = hasDetail(contact.contact_detail_list, EMAIL_TYPE, email);
+    if (!emailAttached) {
+      console.error("[/api/auth/signup] ⚠️ email is NOT on contact", contactId, "— this client will not be findable by request-otp");
+    }
+
+    console.log("[/api/auth/signup] ✓ contact created — id:", contact.id, "uid:", contact.uid, "| email attached:", emailAttached);
 
     // Burn the link now that it has done its job.
     await consumeSignupToken(payload);
@@ -201,6 +291,11 @@ export async function POST(req) {
       token:      sessionToken,
       expires_in: SESSION_MAX_AGE,
       portal_url: getPortalUrl(),
+      // Signed in, but they'd hit a wall next time. The page surfaces this
+      // rather than letting them find out weeks later at the login screen.
+      ...(emailAttached ? {} : {
+        warning: "You're signed in, but we couldn't finish linking your email address to your record. Please call the clinic so they can add it — otherwise you won't be able to sign in again.",
+      }),
     });
     r.cookies.set(SESSION_COOKIE_NAME, sessionToken, {
       httpOnly: true,

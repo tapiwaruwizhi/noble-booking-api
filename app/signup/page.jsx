@@ -37,6 +37,7 @@ export default function SignupPage() {
   const [deadMsg, setDead]  = useState("");
   const [busy, setBusy]     = useState(false);
   const [name, setName]     = useState("");
+  const [warning, setWarning] = useState("");
   const [portal, setPortal] = useState(PORTAL_FALLBACK);
 
   // Read the token from the URL directly rather than via useSearchParams, which
@@ -102,6 +103,9 @@ export default function SignupPage() {
       }
       setName(data?.firstName || first.trim());
       if (data?.portal_url) setPortal(data.portal_url);
+      // Signed in, but something about the record needs a human. Shown on the
+      // success screen rather than swallowed — see the route's `warning`.
+      setWarning(data?.warning || "");
       setPhase("done");
     } catch {
       setError("We couldn't reach the clinic just now. Check your connection and try again.");
@@ -184,6 +188,7 @@ export default function SignupPage() {
               Your account is ready and you're signed in. You can book
               appointments, add your pets and see your visit history.
             </p>
+            {warning && <p className="nvc-su-warn" role="alert">{warning}</p>}
             <a className="nvc-su-btn" href={portal}>Continue to your account</a>
             <p className="nvc-su-hint nvc-su-center" style={{ marginTop: 16 }}>
               Using the Noble Vet app? Open it and sign in with{" "}
@@ -234,6 +239,8 @@ const CSS = `
   .nvc-su-row   { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px; }
   .nvc-su-err   { font-size: 13.5px; color: #B42318; background: #FEF3F2; border: 1px solid #FDA29B;
                   border-radius: 10px; padding: 10px 12px; margin: 0 0 16px; }
+  .nvc-su-warn  { font-size: 13.5px; line-height: 1.5; color: #6B4E12; background: #FEF7E6;
+                  border: 1px solid #F3D48A; border-radius: 10px; padding: 12px 14px; margin: 0 0 16px; }
   .nvc-su-btn {
     display: block; width: 100%; box-sizing: border-box; text-align: center; text-decoration: none;
     font: inherit; font-size: 15px; font-weight: 600; color: #fff; background: #2465B4;
