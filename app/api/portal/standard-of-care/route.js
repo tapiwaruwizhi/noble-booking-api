@@ -1,3 +1,4 @@
+
 // src/app/api/portal/standard-of-care/route.js
 // GET — returns the Standard of Care (SOC) schedule for every animal belonging
 // to the logged-in contact: what's due, when, and when it was last done.
