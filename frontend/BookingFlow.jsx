@@ -36,7 +36,12 @@ const css = `
   .nvc-wrap *, .nvc-wrap *::before, .nvc-wrap *::after { box-sizing: border-box; }
   .nvc-wrap { font-family: ${sans}; background: #F4F6F9; min-height: 100vh; color: ${T.ink}; font-size: 16px; line-height: 1.55; }
   .nvc-wrap button { font: inherit; cursor: pointer; }
+  .nvc-wrap a, .nvc-wrap a:hover, .nvc-wrap a:visited, .nvc-wrap a:focus { text-decoration: none; }
   .nvc-shell { max-width: 900px; margin: 0 auto; padding: 32px 24px 110px; }
+
+  /* ══════════════════════════════════════════════════════════════════
+     SHARED / BASE STYLES (no mobile/desktop variant)
+     ══════════════════════════════════════════════════════════════════ */
 
   /* ── Buttons ─────────────────────────────────────────────────────────── */
   .nvc-btn { display: inline-flex; align-items: center; justify-content: center; gap: 9px; background: ${T.blue}; color: #fff; padding: 14px 28px; border-radius: 999px; font-size: 15.5px; font-weight: 500; border: none; }
@@ -59,8 +64,6 @@ const css = `
   .nvc-wrap .nvc-h1-sub-center { text-align: center; max-width: 480px; margin-left: auto; margin-right: auto; line-height: 1.6; }
 
   /* ── Option cards (clinic / service / vet) ──────────────────────────── */
-  .nvc-optgrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; max-width: 760px; margin-bottom: 24px; }
-  @media(max-width: 760px) { .nvc-optgrid { grid-template-columns: 1fr; } }
   .nvc-opt { display: flex; align-items: center; gap: 14px; border: 1.5px solid ${T.line}; border-radius: 14px; padding: 16px; background: #fff; width: 100%; text-align: left; position: relative; }
   .nvc-opt:hover { border-color: ${T.blue}; }
   .nvc-opt.sel { border-color: ${T.blue}; background: ${T.blueWash}; }
@@ -78,15 +81,11 @@ const css = `
   .nvc-b24 { font-size: 9.5px; letter-spacing: .09em; text-transform: uppercase; font-weight: 600; background: ${T.ink}; color: #fff; padding: 2px 8px; border-radius: 999px; margin-left: 7px; vertical-align: 1px; }
 
   /* ── Time step ───────────────────────────────────────────────────────── */
-  .nvc-timewrap { display: grid; grid-template-columns: 1.4fr 1fr; gap: 26px; align-items: start; max-width: 880px; }
-  @media(max-width: 860px) { .nvc-timewrap { grid-template-columns: 1fr; } }
   .nvc-days { display: flex; gap: 9px; overflow-x: auto; padding-bottom: 16px; }
   .nvc-day { flex: none; width: 62px; border: 1.5px solid ${T.line}; border-radius: 13px; padding: 11px 0; text-align: center; background: #fff; }
   .nvc-day.sel { border-color: ${T.blue}; background: ${T.blue}; color: #fff; }
   .nvc-day small { display: block; font-size: 11px; opacity: .7; }
   .nvc-day b { display: block; font-size: 17px; font-weight: 500; }
-  .nvc-slots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; }
-  @media(max-width: 560px) { .nvc-slots { grid-template-columns: repeat(3, 1fr); } }
   .nvc-slotbtn { border: 1.5px solid ${T.line}; border-radius: 12px; padding: 13px 0; text-align: center; font-size: 14.5px; font-weight: 500; background: #fff; color: ${T.ink}; }
   .nvc-slotbtn:hover { border-color: ${T.blue}; }
   .nvc-slotbtn.sel { border-color: ${T.blue}; background: ${T.blue}; color: #fff; }
@@ -111,8 +110,6 @@ const css = `
   .nvc-input.error { border-color: ${T.urgent}; }
   .nvc-error-text { font-size: 12.5px; color: ${T.urgent}; margin-top: 6px; }
   textarea.nvc-input { resize: vertical; min-height: 90px; }
-  .nvc-form-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  @media(max-width: 560px) { .nvc-form-grid2 { grid-template-columns: 1fr; } }
   .nvc-divider { display: flex; align-items: center; gap: 12px; margin: 18px 0; }
   .nvc-divider-line { flex: 1; height: 1px; background: ${T.line}; }
   .nvc-divider-text { font-size: 10px; color: ${T.muted}; text-transform: uppercase; letter-spacing: .1em; white-space: nowrap; }
@@ -125,9 +122,7 @@ const css = `
   .nvc-addpet { display: flex; align-items: center; gap: 8px; padding: 12px 18px; border: 1.5px dashed ${T.line}; border-radius: 12px; cursor: pointer; color: ${T.blue}; font-size: 13px; font-weight: 600; background: #fff; margin: 0 auto 20px; width: fit-content; }
 
   /* ── Nav row (fixed bottom, booking wizard) ─────────────────────────── */
-  .nvc-navrow { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid ${T.line}; padding: 16px 32px; display: flex; justify-content: space-between; align-items: center; z-index: 100; box-shadow: 0 -4px 16px rgba(0,0,0,.06); }
   .nvc-navrow-inner { display: flex; justify-content: space-between; align-items: center; max-width: 900px; margin: 0 auto; width: 100%; }
-  @media(max-width: 700px) { .nvc-navrow { padding: 12px 16px; } }
 
   /* ── Success screen ──────────────────────────────────────────────────── */
   .nvc-done { max-width: 560px; text-align: center; margin: 40px auto 0; padding: 0 20px; }
@@ -143,19 +138,6 @@ const css = `
   .nvc-spinner { width: 36px; height: 36px; border: 3px solid ${T.blueWash}; border-top-color: ${T.blue}; border-radius: 50%; animation: nvc-spin .8s linear infinite; }
   @keyframes nvc-spin { to { transform: rotate(360deg); } }
 
-  /* ── Login splash ────────────────────────────────────────────────────── */
-  .nvc-auth { min-height: 100vh; display: grid; grid-template-columns: 1.05fr .95fr; }
-  @media(max-width: 900px) { .nvc-auth { grid-template-columns: 1fr; } .nvc-auth .nvc-auth-side { display: none; } }
-  .nvc-auth-side { background: ${T.ink}; color: #fff; padding: 56px 60px; display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; }
-  .nvc-auth-side::after { content: ""; position: absolute; inset: 0; background: radial-gradient(110% 70% at 78% 18%, rgba(36,101,180,.36), transparent 62%); }
-  .nvc-auth-side > * { position: relative; z-index: 2; }
-  .nvc-auth-logo { font-family: ${serif}; font-size: 30px; color: #fff; }
-  .nvc-auth-side h1 { font-family: ${serif}; font-weight: 400; font-size: clamp(30px,3.2vw,44px); line-height: 1.08; margin: 26px 0 18px; max-width: 16ch; }
-  .nvc-auth-side p { color: rgba(255,255,255,.72); font-size: 17px; max-width: 42ch; margin: 0; }
-  .nvc-auth-side ul { list-style: none; margin: 30px 0 0; padding: 0; }
-  .nvc-auth-side li { display: flex; gap: 13px; padding: 10px 0; font-size: 15px; color: rgba(255,255,255,.86); }
-  .nvc-auth-side li svg { width: 16px; height: 16px; color: #8FB4E0; flex-shrink: 0; margin-top: 4px; }
-  .nvc-auth-side small { font-size: 12.5px; color: rgba(255,255,255,.45); }
   .nvc-auth-panel { display: flex; align-items: center; justify-content: center; padding: 40px 28px; background: linear-gradient(180deg, ${T.cream} 0%, #F4F6F9 100%); }
   .nvc-auth-card { width: 100%; max-width: 420px; }
   .nvc-auth-card h2 { font-family: ${serif}; font-weight: 400; font-size: 29px; margin-bottom: 8px; }
@@ -165,96 +147,47 @@ const css = `
   .nvc-auth-fine a { color: ${T.blue}; font-weight: 500; }
 
   /* ── App shell (sidebar + main) ──────────────────────────────────────── */
-  .nvc-app { display: grid; grid-template-columns: 250px 1fr; min-height: 100vh; background: #F4F6F9; }
-  @media(max-width: 960px) { .nvc-app { grid-template-columns: 1fr; } .nvc-side { display: none; } }
-  .nvc-side { background: #fff; border-right: 1px solid ${T.line}; padding: 26px 18px; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
-  .nvc-side-logo { font-family: ${serif}; font-size: 22px; margin: 0 8px 26px; color: ${T.ink}; }
-  .nvc-side nav { display: flex; flex-direction: column; gap: 3px; flex: 1; }
-  .nvc-side nav button { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 11px; font-size: 15px; color: ${T.muted}; width: 100%; text-align: left; background: none; border: none; }
-  .nvc-side nav button svg { width: 18px; height: 18px; flex-shrink: 0; }
-  .nvc-side nav button:hover { background: #F7F9FB; color: ${T.ink}; }
-  .nvc-side nav button.on { background: ${T.blueWash}; color: ${T.blue}; font-weight: 500; }
-  .nvc-side-em { border: 1px solid #F0D8D1; background: ${T.urgentWash}; border-radius: 13px; padding: 14px; margin-bottom: 12px; }
-  .nvc-side-em b { display: flex; align-items: center; gap: 8px; font-size: 13px; color: ${T.urgent}; font-weight: 500; margin-bottom: 4px; }
-  .nvc-side-em .dot { width: 6px; height: 6px; border-radius: 50%; background: ${T.urgent}; display: inline-block; animation: nvc-pulse 2s ease-in-out infinite; }
-  @keyframes nvc-pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
-  .nvc-side-em span { font-size: 12px; color: #7A3E2C; display: block; margin-bottom: 9px; }
-  .nvc-side-em a { display: block; text-align: center; background: ${T.urgent}; color: #fff; padding: 9px; border-radius: 999px; font-size: 13px; font-weight: 600; }
-  .nvc-side-me { display: flex; align-items: center; gap: 11px; padding: 11px 8px; border-top: 1px solid ${T.line}; }
-  .nvc-side-me .av { width: 34px; height: 34px; border-radius: 50%; background: ${T.blueWash}; display: flex; align-items: center; justify-content: center; font-family: ${serif}; font-size: 14px; color: ${T.blue}; flex-shrink: 0; }
-  .nvc-side-me b { display: block; font-size: 14px; font-weight: 500; }
-  .nvc-side-me span { font-size: 12px; color: ${T.muted}; }
-
   /* ── Mobile app header (logo / back+title, call icon) ─────────────────── */
   .nvc-mheader { display: none; }
-  @media(max-width: 960px) {
-    .nvc-mheader { display: flex; align-items: center; justify-content: space-between; gap: 12px; position: sticky; top: 0; z-index: 30; background: #fff; border-bottom: 1px solid ${T.line}; padding: 14px 18px; }
-    .nvc-mheader .logo { font-family: ${serif}; font-size: 21px; color: ${T.ink}; }
-    .nvc-mheader .back { display: flex; align-items: center; gap: 6px; background: none; border: none; font-size: 16px; font-weight: 500; color: ${T.ink}; padding: 0; }
-    .nvc-mheader .back svg { width: 20px; height: 20px; }
-    .nvc-mheader .call { width: 36px; height: 36px; border-radius: 50%; border: 1px solid ${T.line}; display: flex; align-items: center; justify-content: center; color: ${T.urgent}; flex-shrink: 0; }
-    .nvc-mheader .call svg { width: 16px; height: 16px; }
-  }
-
   /* ── Mobile bottom tab bar ──────────────────────────────────────────────── */
   .nvc-bottomtabs { display: none; }
-  @media(max-width: 960px) {
-    .nvc-bottomtabs { display: flex; position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid ${T.line}; padding: 8px 6px calc(10px + env(safe-area-inset-bottom)); z-index: 30; }
-    .nvc-bottomtabs button { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 10.5px; color: ${T.muted}; background: none; border: none; padding: 4px; }
-    .nvc-bottomtabs button svg { width: 21px; height: 21px; }
-    .nvc-bottomtabs button.on { color: ${T.blue}; font-weight: 500; }
-    .nvc-main { padding-bottom: 92px; }
-  }
+  .nvc-main { padding-bottom: 60px; }
 
-  /* ── Mobile-only quick-action tiles (Home) ──────────────────────────────── */
-  .nvc-quickgrid { display: none; }
-  @media(max-width: 960px) { .nvc-quickgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-bottom: 20px; } }
-  .nvc-quicktile { display: flex; align-items: center; gap: 10px; border: 1px solid ${T.line}; border-radius: 15px; padding: 14px 13px; background: #fff; text-align: left; }
-  .nvc-quicktile .ic { width: 33px; height: 33px; border-radius: 10px; background: ${T.blueWash}; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-  .nvc-quicktile .ic svg { width: 16px; height: 16px; color: ${T.blue}; }
-  .nvc-quicktile b { font-size: 14px; font-weight: 500; line-height: 1.25; }
-  .nvc-quicktile.em { border-color: #F0D8D1; background: ${T.urgentWash}; }
-  .nvc-quicktile.em .ic { background: #F6DDD6; }
-  .nvc-quicktile.em .ic svg { color: ${T.urgent}; }
-  .nvc-quicktile.em b { color: ${T.urgent}; }
-
-  /* ── Mobile horizontal pet scroller (Home) ──────────────────────────────── */
-  .nvc-petrow-mobile { display: none; }
-  @media(max-width: 960px) {
-    .nvc-petrow-mobile { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 16px; }
-    .nvc-petrow-mobile .nvc-pcard { flex: 0 0 112px; }
-    .nvc-home-petgrid { display: none; }
-  }
-
-  /* ── Mobile row-list variant for "My pets" (matches .nvc-opt styling) ──── */
-  .nvc-petrows-mobile { display: flex; flex-direction: column; gap: 10px; }
-
-  .nvc-main { padding: 34px 40px 60px; max-width: 1080px; }
-  @media(max-width: 700px) { .nvc-main { padding: 22px 18px 50px; } }
   .nvc-phead { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 26px; flex-wrap: wrap; }
   .nvc-phead h1 { font-family: ${serif}; font-weight: 400; font-size: 32px; margin: 0; color: ${T.ink}; }
   .nvc-phead p { color: ${T.muted}; font-size: 15px; margin: 4px 0 0; }
-
-  .nvc-grid2 { display: grid; grid-template-columns: 1.35fr 1fr; gap: 22px; align-items: start; }
-  @media(max-width: 900px) { .nvc-grid2 { grid-template-columns: 1fr; } }
 
   .nvc-nextcard { background: ${T.blue}; color: #fff; border-radius: 16px; padding: 26px 28px; }
   .nvc-nextcard .t { display: flex; align-items: center; gap: 9px; font-size: 11px; letter-spacing: .13em; text-transform: uppercase; opacity: .85; margin-bottom: 12px; }
   .nvc-nextcard .t svg { width: 13px; height: 13px; }
   .nvc-nextcard b { display: block; font-family: ${serif}; font-weight: 400; font-size: 25px; margin-bottom: 6px; }
   .nvc-nextcard span { display: block; font-size: 14.5px; opacity: .9; }
-  .nvc-nextcard .acts { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
-  .nvc-nextcard .acts button { padding: 10px 18px; border-radius: 999px; font-size: 13.5px; font-weight: 500; background: rgba(255,255,255,.18); color: #fff; border: none; }
-  .nvc-nextcard .acts button.w { background: #fff; color: ${T.blue}; }
+  .nvc-nextcard .acts-desktop button, .nvc-nextcard .acts-desktop a {
+    flex: 1; display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 999px; font-size: 13.5px; font-weight: 500;
+    background: rgba(255,255,255,.18); color: #fff; border: none; text-decoration: none; cursor: pointer;
+  }
+  .nvc-nextcard .acts-desktop button:hover, .nvc-nextcard .acts-desktop a:hover { background: rgba(255,255,255,.28); }
+  .nvc-nextcard .acts-desktop button.w, .nvc-nextcard .acts-desktop a.w { background: #fff; color: ${T.blue}; }
+  .nvc-nextcard .acts-desktop button.w:hover, .nvc-nextcard .acts-desktop a.w:hover { background: ${T.blueWash}; }
+  .nvc-nextcard .acts-desktop button:disabled { opacity: .5; pointer-events: none; }
 
-  .nvc-petgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
-  @media(max-width: 760px) { .nvc-petgrid { grid-template-columns: 1fr 1fr; } }
   .nvc-pcard { border: 1px solid ${T.line}; border-radius: 14px; padding: 18px 16px; text-align: center; background: #fff; width: 100%; }
   .nvc-pcard:hover { border-color: ${T.blue}; }
   .nvc-pcard .av { width: 54px; height: 54px; border-radius: 50%; background: ${T.cream}; margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; font-size: 25px; object-fit: cover; overflow: hidden; }
   .nvc-pcard .av img { width: 100%; height: 100%; object-fit: cover; }
   .nvc-pcard b { display: block; font-size: 15px; font-weight: 500; }
   .nvc-pcard span { font-size: 12.5px; color: ${T.muted}; }
+  /* Pet-card Standard-of-Care status line (only rendered from real SOC data) */
+  .nvc-pcard .stat { font-size: 12.5px; font-weight: 500; display: block; }
+  .nvc-pcard .stat.ok { color: ${T.ok}; }
+  .nvc-pcard .stat.warn { color: ${T.amber}; }
+  .nvc-pcard .stat.urgent { color: ${T.urgent}; }
+  .nvc-mhome .pcard .stat { font-size: 11.5px; }
+  .nvc-stat { display: block; font-size: 12px; font-weight: 500; margin-top: 1px; }
+  .nvc-stat.ok { color: ${T.ok}; }
+  .nvc-stat.warn { color: ${T.amber}; }
+  .nvc-stat.urgent { color: ${T.urgent}; }
   .nvc-pcard.add { border-style: dashed; color: ${T.blue}; font-size: 14px; font-weight: 500; display: flex; align-items: center; justify-content: center; min-height: 130px; }
 
   .nvc-hrow { display: flex; gap: 16px; padding: 15px 0; border-bottom: 1px solid ${T.line}; align-items: center; width: 100%; text-align: left; background: none; border-left: none; border-right: none; border-top: none; }
@@ -267,16 +200,11 @@ const css = `
   .nvc-hrow .tx span { font-size: 13px; color: ${T.muted}; display: block; }
   .nvc-hrow .ar svg { width: 15px; height: 15px; color: ${T.muted}; }
 
-  /* ── Pet profile ─────────────────────────────────────────────────────── */
-  .nvc-pettop { display: grid; grid-template-columns: auto 1fr; gap: 26px; align-items: center; background: ${T.cream}; border-radius: 16px; padding: 28px 30px; margin-bottom: 24px; }
-  @media(max-width: 620px) { .nvc-pettop { grid-template-columns: 1fr; text-align: center; } }
-  .nvc-pettop .av { width: 96px; height: 96px; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center; font-size: 44px; overflow: hidden; margin: 0 auto; }
-  .nvc-pettop .av img { width: 100%; height: 100%; object-fit: cover; }
-  .nvc-pettop h1 { font-family: ${serif}; font-weight: 400; font-size: 32px; margin-bottom: 4px; }
-  .nvc-pettop p { color: ${T.muted}; font-size: 15px; margin: 0 0 12px; }
-  .nvc-chips { display: flex; gap: 7px; flex-wrap: wrap; }
-  @media(max-width: 620px) { .nvc-chips { justify-content: center; } }
-  .nvc-chips span { font-size: 12.5px; background: #fff; border: 1px solid ${T.line}; padding: 5px 13px; border-radius: 999px; color: ${T.muted}; }
+  .nvc-pettop-mobile .av, .nvc-pettop-desktop .av { width: 96px; height: 96px; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center; font-size: 44px; overflow: hidden; margin: 0 auto; }
+  .nvc-pettop-mobile .av img, .nvc-pettop-desktop .av img { width: 100%; height: 100%; object-fit: cover; }
+  .nvc-pettop-mobile h1, .nvc-pettop-desktop h1 { font-family: ${serif}; font-weight: 400; font-size: 32px; margin-bottom: 4px; }
+  .nvc-pettop-mobile p, .nvc-pettop-desktop p { color: ${T.muted}; font-size: 15px; margin: 0 0 12px; }
+  .nvc-chips-mobile span, .nvc-chips-desktop span { font-size: 12.5px; background: #fff; border: 1px solid ${T.line}; padding: 5px 13px; border-radius: 999px; color: ${T.muted}; }
 
   .nvc-due { border-radius: 14px; padding: 4px 20px; margin-bottom: 24px; }
   .nvc-due.ok { background: ${T.okWash}; border: 1px solid ${T.okLine}; }
@@ -288,16 +216,15 @@ const css = `
   .nvc-due small { font-size: 13px; color: ${T.muted}; }
   .nvc-due .st { font-size: 13.5px; font-weight: 500; color: ${T.ok}; }
   .nvc-due .st.w { color: ${T.amber}; }
+  .nvc-due .st.u { color: ${T.urgent}; }
 
   /* ── Consult detail ──────────────────────────────────────────────────── */
-  .nvc-cgrid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 26px; align-items: start; }
-  @media(max-width: 860px) { .nvc-cgrid { grid-template-columns: 1fr; } }
   .nvc-blk { margin-bottom: 24px; }
   .nvc-blk .bl { font-size: 11px; letter-spacing: .13em; text-transform: uppercase; color: ${T.blue}; font-weight: 500; margin: 0 0 8px; }
   .nvc-blk p { margin: 0; font-size: 15.5px; }
 
   /* ── Account settings rows ──────────────────────────────────────────── */
-  .nvc-mrow { display: flex; align-items: center; gap: 14px; padding: 16px 0; border-bottom: 1px solid ${T.line}; width: 100%; text-align: left; background: none; border-left: none; border-right: none; border-top: none; }
+  .nvc-mrow { display: flex; align-items: center; gap: 14px; padding: 16px 0; border-bottom: 1px solid ${T.line}; width: 100%; text-align: left; background: none; border-left: none; border-right: none; border-top: none; color: ${T.ink}; cursor: pointer; }
   .nvc-mrow:last-child { border-bottom: none; }
   .nvc-mrow .ic { width: 38px; height: 38px; border-radius: 11px; background: ${T.blueWash}; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
   .nvc-mrow .ic svg { width: 17px; height: 17px; color: ${T.blue}; }
@@ -316,16 +243,10 @@ const css = `
   .nvc-subtab:hover { background: ${T.blueWash}; color: ${T.ink}; }
   .nvc-subtab.on { background: ${T.ink}; color: #fff; }
 
-  .nvc-fin-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 20px; }
-  @media(max-width: 700px) { .nvc-fin-cards { grid-template-columns: 1fr; } }
   .nvc-fin-card { background: ${T.cream}; border-radius: 12px; padding: 16px 18px; }
   .nvc-fin-label { font-size: 12px; color: ${T.muted}; margin-bottom: 6px; }
   .nvc-fin-value { font-size: 22px; font-weight: 700; color: ${T.ink}; }
   .nvc-pending-row { display: flex; justify-content: space-between; align-items: center; background: ${T.urgentWash}; border: 1px solid #F5C6C0; border-radius: 10px; padding: 12px 16px; margin-bottom: 8px; }
-
-  /* ── Pet-details mini grid (used inside pet profile hero) ─────────────── */
-  .nvc-minigrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-  @media(max-width: 620px) { .nvc-minigrid { grid-template-columns: 1fr 1fr; } }
 
   /* ── Modal ───────────────────────────────────────────────────────────── */
   .nvc-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; }
@@ -333,7 +254,208 @@ const css = `
   .nvc-modal-title { font-family: ${serif}; font-size: 22px; font-weight: 400; color: ${T.ink}; margin-bottom: 4px; }
   .nvc-modal-close { float: right; background: none; border: none; font-size: 20px; color: ${T.muted}; cursor: pointer; margin-top: -4px; }
 
+
   .nvc-toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: 26px; background: ${T.ink}; color: #fff; padding: 13px 22px; border-radius: 999px; font-size: 14px; z-index: 999; box-shadow: 0 10px 30px rgba(0,0,0,.2); }
+
+
+  /* ══════════════════════════════════════════════════════════════════
+     MOBILE-ONLY STYLES
+     ══════════════════════════════════════════════════════════════════ */
+
+  .nvc-optgrid-mobile { display: grid; grid-template-columns: 1fr; gap: 12px; max-width: 760px; margin-bottom: 24px; }
+
+  .nvc-timewrap-mobile { display: grid; grid-template-columns: 1fr; gap: 26px; align-items: start; max-width: 880px; }
+
+  .nvc-slots-mobile { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
+
+  .nvc-form-grid2-mobile { display: grid; grid-template-columns: 1fr; gap: 12px; }
+
+  .nvc-navrow-mobile { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid ${T.line}; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; z-index: 100; box-shadow: 0 -4px 16px rgba(0,0,0,.06); }
+
+  /* ── Login splash ────────────────────────────────────────────────────── */
+  .nvc-auth-mobile { min-height: 100vh; display: grid; grid-template-columns: 1fr; }
+
+  .nvc-app-mobile { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; min-height: 100vh; background: #F4F6F9; }
+
+  @media(max-width: 960px) {
+    .nvc-mheader { display: flex; align-items: center; justify-content: space-between; gap: 12px; position: sticky; top: 0; z-index: 30; background: #fff; border-bottom: 1px solid ${T.line}; padding: 14px 18px; }
+    .nvc-mheader .logo { font-family: ${serif}; font-size: 21px; color: ${T.ink}; }
+    .nvc-mheader .back { display: flex; align-items: center; gap: 6px; background: none; border: none; font-size: 16px; font-weight: 500; color: ${T.ink}; padding: 0; }
+    .nvc-mheader .back svg { width: 20px; height: 20px; }
+    .nvc-mheader .call { width: 36px; height: 36px; border-radius: 50%; border: 1px solid ${T.line}; display: flex; align-items: center; justify-content: center; color: ${T.urgent}; flex-shrink: 0; }
+    .nvc-mheader .call svg { width: 16px; height: 16px; }
+  }
+  @media(max-width: 960px) {
+    .nvc-bottomtabs { display: flex; position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid ${T.line}; padding: 8px 6px calc(10px + env(safe-area-inset-bottom)); z-index: 30; }
+    .nvc-bottomtabs button { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 10.5px; color: ${T.muted}; background: none; border: none; padding: 4px; }
+    .nvc-bottomtabs button svg { width: 21px; height: 21px; }
+    .nvc-bottomtabs button.on { color: ${T.blue}; font-weight: 500; }
+    .nvc-main { padding-bottom: 92px; }
+  }
+  /* ── Mobile Profile hero (avatar + name + meta) ───────────────────────── */
+  .nvc-mprof { text-align: center; padding: 20px 18px 18px; }
+  .nvc-mprof .av { width: 84px; height: 84px; border-radius: 50%; background: ${T.blueWash}; margin: 0 auto 13px; display: flex; align-items: center; justify-content: center; font-family: ${serif}; font-size: 29px; color: ${T.blue}; overflow: hidden; }
+  .nvc-mprof h2 { font-family: ${serif}; font-weight: 400; font-size: 27px; margin: 0 0 4px; color: ${T.ink}; }
+  .nvc-mprof p { font-size: 13.5px; color: ${T.muted}; margin: 0; }
+
+  /* ── "Your clinics" list (Account page) ───────────────────────────────── */
+  .nvc-cliniclist .r { padding: 15px 0; border-bottom: 1px solid ${T.line}; }
+  .nvc-cliniclist .r:last-child { border-bottom: none; }
+  .nvc-cliniclist b { display: block; font-size: 15.5px; font-weight: 500; color: ${T.ink}; margin-bottom: 3px; }
+  .nvc-cliniclist span { display: block; font-size: 13.5px; color: ${T.muted}; }
+
+  /* ── Compact mobile section header (used on sub-pages whose title is
+     already shown in the sticky top bar — mirrors .nvc-mhome .sechd) ─────── */
+  .nvc-msechd { display: flex; align-items: baseline; justify-content: space-between; margin: 2px 0 13px; }
+  .nvc-msechd b { font-size: 16.5px; font-weight: 500; color: ${T.ink}; }
+  .nvc-msechd button { font-size: 13px; color: ${T.blue}; font-weight: 500; background: none; border: none; padding: 0; cursor: pointer; }
+
+  /* ── Mobile row-list variant for "My pets" (matches .nvc-opt styling) ──── */
+  .nvc-petrows-mobile { display: flex; flex-direction: column; gap: 10px; }
+
+  .nvc-main-mobile { padding: 22px 18px 96px; max-width: 1080px; }
+
+  /* ── Mobile HOME screen — standalone, matches the phone prototype ─────────
+     Deliberately does NOT reuse any desktop class. Full-bleed: the parent
+     <main> uses .nvc-main-mhome (zero side padding) so the pet scroller can
+     run edge-to-edge, and each block sets its own 18px gutter. ──────────── */
+  .nvc-main-mhome { padding: 0 0 96px; max-width: none; }
+  .nvc-main-mwhite { background: #fff; min-height: calc(100vh - 66px); }
+
+  .nvc-mhome .hi { padding: 18px 18px 2px; }
+  .nvc-mhome .hi small { display: block; font-size: 13.5px; color: ${T.muted}; }
+  .nvc-mhome .hi h2 { font-family: ${serif}; font-weight: 400; font-size: 27px; margin: 2px 0 0; color: ${T.ink}; line-height: 1.15; }
+
+  .nvc-mhome .next { background: ${T.blue}; color: #fff; border-radius: 17px; padding: 16px; margin: 14px 18px 0; }
+  .nvc-mhome .next .t { display: flex; align-items: center; gap: 8px; font-size: 10.5px; letter-spacing: .13em; text-transform: uppercase; opacity: .85; margin-bottom: 9px; }
+  .nvc-mhome .next .t svg { width: 12px; height: 12px; }
+  .nvc-mhome .next b { display: block; font-size: 17px; font-weight: 500; margin-bottom: 3px; }
+  .nvc-mhome .next span { display: block; font-size: 13.5px; opacity: .9; }
+  .nvc-mhome .next .acts { display: flex; gap: 8px; margin-top: 14px; }
+  .nvc-mhome .next .acts button, .nvc-mhome .next .acts a {
+    flex: 1; min-width: 0; display: inline-flex; align-items: center; justify-content: center; text-align: center;
+    padding: 10px 6px; border-radius: 999px; font-size: 13px; font-weight: 500;
+    background: rgba(255,255,255,.18); color: #fff; border: none; text-decoration: none; cursor: pointer;
+  }
+  .nvc-mhome .next .acts .w { background: #fff; color: ${T.blue}; }
+  .nvc-mhome .next .acts button:disabled { opacity: .5; pointer-events: none; }
+
+  .nvc-mhome .quick { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; padding: 16px 18px 0; }
+  .nvc-mhome .q { border: 1px solid ${T.line}; border-radius: 15px; padding: 14px 13px; display: flex; flex-direction: column; gap: 9px; background: #fff; text-align: left; text-decoration: none; cursor: pointer; }
+  .nvc-mhome .q .ic { width: 33px; height: 33px; border-radius: 10px; background: ${T.blueWash}; display: flex; align-items: center; justify-content: center; }
+  .nvc-mhome .q .ic svg { width: 16px; height: 16px; color: ${T.blue}; }
+  .nvc-mhome .q b { font-size: 14px; font-weight: 500; line-height: 1.25; color: ${T.ink}; }
+  .nvc-mhome .q.red { border-color: #F0D8D1; background: ${T.urgentWash}; }
+  .nvc-mhome .q.red .ic { background: #F6DDD6; }
+  .nvc-mhome .q.red .ic svg { color: ${T.urgent}; }
+  .nvc-mhome .q.red b { color: ${T.urgent}; }
+
+  .nvc-mhome .pad { padding: 0 18px; }
+  .nvc-mhome .sechd { display: flex; align-items: baseline; justify-content: space-between; margin: 22px 0 11px; }
+  .nvc-mhome .sechd b { font-size: 16.5px; font-weight: 500; color: ${T.ink}; }
+  .nvc-mhome .sechd button { font-size: 13px; color: ${T.blue}; font-weight: 500; background: none; border: none; padding: 0; cursor: pointer; }
+
+  .nvc-mhome .petrow { display: flex; gap: 10px; overflow-x: auto; padding: 0 18px 4px; scrollbar-width: none; }
+  .nvc-mhome .petrow::-webkit-scrollbar { display: none; }
+  .nvc-mhome .pcard { flex: none; width: 116px; border: 1px solid ${T.line}; border-radius: 15px; padding: 13px 10px; text-align: center; background: #fff; cursor: pointer; }
+  .nvc-mhome .pcard .av { width: 48px; height: 48px; border-radius: 50%; background: ${T.cream}; margin: 0 auto 8px; display: flex; align-items: center; justify-content: center; font-size: 22px; overflow: hidden; }
+  .nvc-mhome .pcard .av img { width: 100%; height: 100%; object-fit: cover; }
+  .nvc-mhome .pcard b { display: block; font-size: 14px; font-weight: 500; color: ${T.ink}; }
+  .nvc-mhome .pcard span { display: block; font-size: 11.5px; color: ${T.muted}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .nvc-mhome .pcard.add { display: flex; align-items: center; justify-content: center; border-style: dashed; color: ${T.blue}; font-size: 13px; font-weight: 500; }
+
+  .nvc-mhome .hrow { display: flex; gap: 13px; padding: 14px 0; border-bottom: 1px solid ${T.line}; align-items: center; width: 100%; background: none; border-left: none; border-right: none; border-top: none; text-align: left; cursor: pointer; }
+  .nvc-mhome .hrow:last-of-type { border-bottom: none; }
+  .nvc-mhome .hrow .dt { flex: none; width: 54px; }
+  .nvc-mhome .hrow .dt b { display: block; font-size: 14px; font-weight: 500; color: ${T.ink}; }
+  .nvc-mhome .hrow .dt small { font-size: 11px; color: ${T.muted}; }
+  .nvc-mhome .hrow .tx { flex: 1; min-width: 0; }
+  .nvc-mhome .hrow .tx b { display: block; font-size: 14.5px; font-weight: 500; margin-bottom: 2px; color: ${T.ink}; }
+  .nvc-mhome .hrow .tx span { display: block; font-size: 12.5px; color: ${T.muted}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .nvc-mhome .hrow .ar { color: ${T.muted}; flex: none; display: flex; }
+  .nvc-mhome .hrow .ar svg { width: 14px; height: 14px; }
+  .nvc-mhome .mempty { color: ${T.muted}; font-size: 13.5px; padding: 14px 0; }
+
+  .nvc-grid2-mobile { display: grid; grid-template-columns: 1fr; gap: 22px; align-items: start; }
+
+  .nvc-pettop-mobile { display: grid; grid-template-columns: 1fr; text-align: center; gap: 26px; align-items: center; background: ${T.cream}; border-radius: 16px; padding: 28px 30px; margin-bottom: 24px; }
+
+  .nvc-chips-mobile { display: flex; gap: 7px; flex-wrap: wrap; justify-content: center; }
+
+  .nvc-cgrid-mobile { display: grid; grid-template-columns: 1fr; gap: 26px; align-items: start; }
+
+  .nvc-fin-cards-mobile { display: grid; grid-template-columns: 1fr; gap: 14px; margin-bottom: 20px; }
+
+  /* ── Pet-details mini grid (used inside pet profile hero) ─────────────── */
+  .nvc-minigrid-mobile { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+
+  /* ══════════════════════════════════════════════════════════════════
+     DESKTOP-ONLY STYLES
+     ══════════════════════════════════════════════════════════════════ */
+
+  .nvc-optgrid-desktop { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; max-width: 760px; margin-bottom: 24px; }
+
+  .nvc-timewrap-desktop { display: grid; grid-template-columns: 1.4fr 1fr; gap: 26px; align-items: start; max-width: 880px; }
+
+  .nvc-slots-desktop { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; }
+
+  .nvc-form-grid2-desktop { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  .nvc-navrow-desktop { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid ${T.line}; padding: 16px 32px; display: flex; justify-content: space-between; align-items: center; z-index: 100; box-shadow: 0 -4px 16px rgba(0,0,0,.06); }
+
+  .nvc-auth-desktop { min-height: 100vh; display: grid; grid-template-columns: 1.05fr .95fr; }
+
+  .nvc-auth-side { background: ${T.ink}; color: #fff; padding: 56px 60px; display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; }
+  .nvc-auth-side::after { content: ""; position: absolute; inset: 0; background: radial-gradient(110% 70% at 78% 18%, rgba(36,101,180,.36), transparent 62%); }
+  .nvc-auth-side > * { position: relative; z-index: 2; }
+  .nvc-auth-logo { font-family: ${serif}; font-size: 30px; color: #fff; }
+  .nvc-auth-side h1 { font-family: ${serif}; font-weight: 400; font-size: clamp(30px,3.2vw,44px); line-height: 1.08; margin: 26px 0 18px; max-width: 16ch; }
+  .nvc-auth-side p { color: rgba(255,255,255,.72); font-size: 17px; max-width: 42ch; margin: 0; }
+  .nvc-auth-side ul { list-style: none; margin: 30px 0 0; padding: 0; }
+  .nvc-auth-side li { display: flex; gap: 13px; padding: 10px 0; font-size: 15px; color: rgba(255,255,255,.86); }
+  .nvc-auth-side li svg { width: 16px; height: 16px; color: #8FB4E0; flex-shrink: 0; margin-top: 4px; }
+  .nvc-auth-side small { font-size: 12.5px; color: rgba(255,255,255,.45); }
+
+  .nvc-app-desktop { display: grid; grid-template-columns: 250px minmax(0, 1fr); min-height: 100vh; background: #F4F6F9; }
+
+  .nvc-side { background: #fff; border-right: 1px solid ${T.line}; padding: 26px 18px; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
+  .nvc-side-logo { font-family: ${serif}; font-size: 22px; margin: 0 8px 26px; color: ${T.ink}; }
+  .nvc-side nav { display: flex; flex-direction: column; gap: 3px; flex: 1; }
+  .nvc-side nav button { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 11px; font-size: 15px; color: ${T.muted}; width: 100%; text-align: left; background: none; border: none; }
+  .nvc-side nav button svg { width: 18px; height: 18px; flex-shrink: 0; }
+  .nvc-side nav button:hover { background: #F7F9FB; color: ${T.ink}; }
+  .nvc-side nav button.on { background: ${T.blueWash}; color: ${T.blue}; font-weight: 500; }
+  .nvc-side-em { border: 1px solid #F0D8D1; background: ${T.urgentWash}; border-radius: 13px; padding: 14px; margin-bottom: 12px; }
+  .nvc-side-em b { display: flex; align-items: center; gap: 8px; font-size: 13px; color: ${T.urgent}; font-weight: 500; margin-bottom: 4px; }
+  .nvc-side-em .dot { width: 6px; height: 6px; border-radius: 50%; background: ${T.urgent}; display: inline-block; animation: nvc-pulse 2s ease-in-out infinite; }
+  @keyframes nvc-pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+  .nvc-side-em span { font-size: 12px; color: #7A3E2C; display: block; margin-bottom: 9px; }
+  .nvc-side-em a { display: block; text-align: center; background: ${T.urgent}; color: #fff; padding: 9px; border-radius: 999px; font-size: 13px; font-weight: 600; }
+  .nvc-side-me { display: flex; align-items: center; gap: 11px; padding: 11px 8px; border-top: 1px solid ${T.line}; }
+  .nvc-side-me .av { width: 34px; height: 34px; border-radius: 50%; background: ${T.blueWash}; display: flex; align-items: center; justify-content: center; font-family: ${serif}; font-size: 14px; color: ${T.blue}; flex-shrink: 0; }
+  .nvc-side-me b { display: block; font-size: 14px; font-weight: 500; }
+  .nvc-side-me span { font-size: 12px; color: ${T.muted}; }
+
+  .nvc-main-desktop { padding: 34px 40px 60px; max-width: 1080px; }
+
+  .nvc-grid2-desktop { display: grid; grid-template-columns: 1.35fr 1fr; gap: 22px; align-items: start; }
+
+  .nvc-nextcard .acts-desktop { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+  .nvc-nextcard .acts-desktop button, .nvc-nextcard .acts-desktop a { min-width: 100px; padding: 10px 18px; }
+
+  .nvc-petgrid-desktop { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+
+  .nvc-pettop-desktop { display: grid; grid-template-columns: auto 1fr; text-align: left; gap: 26px; align-items: center; background: ${T.cream}; border-radius: 16px; padding: 28px 30px; margin-bottom: 24px; }
+
+  .nvc-chips-desktop { display: flex; gap: 7px; flex-wrap: wrap; justify-content: flex-start; }
+
+  .nvc-cgrid-desktop { display: grid; grid-template-columns: 1.5fr 1fr; gap: 26px; align-items: start; }
+
+  .nvc-fin-cards-desktop { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 20px; }
+
+  .nvc-minigrid-desktop { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+
 `
 
 const STEPS = [
@@ -465,6 +587,7 @@ function DayStrip({ selectedDate, onSelect, minDate }) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function BookingWizard({ onGoToAccount }) {
+    const isMobile = useIsMobile()
     const [config, setConfig] = useState(null)
     const [configError, setConfigError] = useState(null)
     const [branches, setBranches] = useState({})
@@ -741,7 +864,7 @@ function BookingWizard({ onGoToAccount }) {
                             <>
                                 <div className="nvc-h1">Which clinic?</div>
                                 <div className="nvc-h1-sub">Choose where you would like to be seen</div>
-                                <div className="nvc-optgrid">
+                                <div className={isMobile ? "nvc-optgrid-mobile" : "nvc-optgrid-desktop"}>
                                     {Object.keys(branches).map((branch) => {
                                         const sep = separations.find((s) => s.name === branch)
                                         const selected = selectedBranch === branch
@@ -773,7 +896,7 @@ function BookingWizard({ onGoToAccount }) {
                             <>
                                 <div className="nvc-h1">What do they need?</div>
                                 <div className="nvc-h1-sub">{selectedBranch}</div>
-                                <div className="nvc-optgrid">
+                                <div className={isMobile ? "nvc-optgrid-mobile" : "nvc-optgrid-desktop"}>
                                     {config.appointmentTypes.map((t, i) => (
                                         <button
                                             key={t.uid}
@@ -806,7 +929,7 @@ function BookingWizard({ onGoToAccount }) {
                                 <div className="nvc-h1-sub">
                                     {selectedBranch} · {selectedApptType?.name}
                                 </div>
-                                <div className="nvc-optgrid">
+                                <div className={isMobile ? "nvc-optgrid-mobile" : "nvc-optgrid-desktop"}>
                                     {(branches[selectedBranch] || []).map((r) => (
                                         <button
                                             key={r.uid}
@@ -833,7 +956,7 @@ function BookingWizard({ onGoToAccount }) {
                             <>
                                 <div className="nvc-h1">Pick a time</div>
                                 <div className="nvc-h1-sub">{selectedResource?.name}</div>
-                                <div className="nvc-timewrap">
+                                <div className={isMobile ? "nvc-timewrap-mobile" : "nvc-timewrap-desktop"}>
                                     <div>
                                         <DayStrip selectedDate={selectedDate} onSelect={setSelectedDate} minDate={minDate} />
                                         {!selectedDate && (
@@ -850,7 +973,7 @@ function BookingWizard({ onGoToAccount }) {
                                             </div>
                                         )}
                                         {selectedDate && !slotsLoading && slots.length > 0 && (
-                                            <div className="nvc-slots">
+                                            <div className={isMobile ? "nvc-slots-mobile" : "nvc-slots-desktop"}>
                                                 {slots.map((slot, i) => (
                                                     <button
                                                         key={i}
@@ -952,7 +1075,7 @@ function BookingWizard({ onGoToAccount }) {
                                                     onChange={(e) => setOwnerName(e.target.value)}
                                                 />
                                             </div>
-                                            <div className="nvc-form-grid2" style={{ marginBottom: 16 }}>
+                                            <div className={isMobile ? "nvc-form-grid2-mobile" : "nvc-form-grid2-desktop"} style={{ marginBottom: 16 }}>
                                                 <div className="nvc-form-field" style={{ marginBottom: 0 }}>
                                                     <label>Email</label>
                                                     <input
@@ -1032,7 +1155,7 @@ function BookingWizard({ onGoToAccount }) {
                                                     onChange={(e) => setNewPet({ ...newPet, name: e.target.value })}
                                                 />
                                             </div>
-                                            <div className="nvc-form-grid2">
+                                            <div className={isMobile ? "nvc-form-grid2-mobile" : "nvc-form-grid2-desktop"}>
                                                 <div className="nvc-form-field" style={{ marginBottom: 0 }}>
                                                     <label>Species</label>
                                                     <select
@@ -1099,7 +1222,7 @@ function BookingWizard({ onGoToAccount }) {
                             </>
                         )}
 
-                        <div className="nvc-navrow">
+                        <div className={isMobile ? "nvc-navrow-mobile" : "nvc-navrow-desktop"}>
                             <div className="nvc-navrow-inner">
                                 {stepIndex > 0 ? (
                                     <button className="nvc-btn out sm" onClick={goBack}>
@@ -1268,6 +1391,42 @@ function AccountPortal({ onBackToBooking }) {
 
     const [cancellingId, setCancellingId] = useState(null)
 
+    // ── In-portal booking flow ("Book appointment" tab) ───────────────────
+    // Recreates the public BookingWizard steps inside the account portal,
+    // minus the identify/personal-details steps — the logged-in contact's
+    // name/email/phone come straight from `profile`, so we never ask again.
+    const [bkStep, setBkStep] = useState(0)
+    const [bkConfig, setBkConfig] = useState(null)
+    const [bkConfigError, setBkConfigError] = useState("")
+    const [bkBranches, setBkBranches] = useState({})
+    const [bkSeparations, setBkSeparations] = useState([])
+    const [bkBranch, setBkBranch] = useState("")
+    const [bkApptType, setBkApptType] = useState(null)
+    const [bkResource, setBkResource] = useState(null)
+    const [bkDate, setBkDate] = useState("")
+    const [bkSlots, setBkSlots] = useState([])
+    const [bkSlotsLoading, setBkSlotsLoading] = useState(false)
+    const [bkSlot, setBkSlot] = useState(null)
+    const [bkPetId, setBkPetId] = useState(null)
+    const [bkNotes, setBkNotes] = useState("")
+    const [bkSaving, setBkSaving] = useState(false)
+    const [bkError, setBkError] = useState("")
+    const [bkRef, setBkRef] = useState(null)
+
+    // Account page is a menu; "Personal details" opens the profile sub-view.
+    const [ownerDetails, setOwnerDetails] = useState(false)
+
+    // ── Standard of Care + vaccination history ────────────────────────────
+    // SOC = what's DUE (forward-looking schedule, drives the due panel and the
+    // pet-card status line). Vaccinations = what was GIVEN (history list).
+    // Both are null until loaded and stay null if the scope isn't granted, so
+    // the UI can tell "nothing due" apart from "couldn't read it" and fall back
+    // to the honest placeholder rather than implying a clean bill of health.
+    const [soc, setSoc] = useState(null)
+    const [socOk, setSocOk] = useState(true)
+    const [vaccinations, setVaccinations] = useState(null)
+    const [vaccinationsOk, setVaccinationsOk] = useState(true)
+
     const [toast, showToast] = useToast()
 
     const refreshAppointments = () => {
@@ -1316,15 +1475,22 @@ function AccountPortal({ onBackToBooking }) {
         setError("")
         setLoading(true)
         try {
-            await fetch(`${API_BASE}/api/auth/request-otp`, {
+            // fetch() only rejects on a NETWORK failure — a 400/500 still
+            // resolves. This used to advance to the code screen regardless, so
+            // a failed request-otp looked like it had worked and every later
+            // error appeared to come from the verify step instead. Check the
+            // status explicitly before moving on.
+            const res = await fetch(`${API_BASE}/api/auth/request-otp`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 credentials: "include",
                 body: JSON.stringify({ identifier: identifier.trim() }),
             })
+            const data = await res.json().catch(() => null)
+            if (!res.ok) throw new Error(data?.error || "We couldn't send your code. Please try again.")
             setStage("otp")
-        } catch {
-            setError("Something went wrong. Please try again.")
+        } catch (err) {
+            setError(err.message || "Something went wrong. Please try again.")
         }
         setLoading(false)
     }
@@ -1575,12 +1741,74 @@ function AccountPortal({ onBackToBooking }) {
                 .then((r) => r.json())
                 .then((d) => setAppointments(d.appointments || []))
         }
+        // SOC drives both the pet cards (home + pets list) and the pet profile,
+        // so load it for any section that renders a pet.
+        if ((section === "home" || section === "pets") && !soc) {
+            fetch(`${API_BASE}/api/portal/standard-of-care`, { credentials: "include" })
+                .then((r) => r.json())
+                .then((d) => {
+                    setSoc(d.by_animal || {})
+                    setSocOk(d.scope_ok !== false)
+                })
+                .catch(() => setSocOk(false))
+        }
+        if (section === "pets" && !vaccinations) {
+            fetch(`${API_BASE}/api/portal/vaccinations`, { credentials: "include" })
+                .then((r) => r.json())
+                .then((d) => {
+                    setVaccinations(d.by_animal || {})
+                    setVaccinationsOk(d.scope_ok !== false)
+                })
+                .catch(() => setVaccinationsOk(false))
+        }
         if (section === "financials" && !financials) {
             fetch(`${API_BASE}/api/portal/financials`, { credentials: "include" })
                 .then((r) => r.json())
                 .then((d) => setFinancials(d))
         }
-    }, [section, loggedIn])
+    }, [section, loggedIn, soc, vaccinations, pets, appointments, financials])
+
+    // Load clinic config the first time the Book tab is opened.
+    useEffect(() => {
+        if ((section !== "book" && section !== "owner") || bkConfig || bkConfigError) return
+        ;(async () => {
+            try {
+                const res = await fetch(`${API_BASE}/api/startup`)
+                const data = await res.json()
+                if (data.error) throw new Error(data.error)
+                setBkConfig(data)
+                setBkSeparations(data.separations || [])
+                const map = {}
+                for (const r of data.resources || []) {
+                    const key = r.separationName || "Main Clinic"
+                    if (!map[key]) map[key] = []
+                    map[key].push(r)
+                }
+                setBkBranches(map)
+                if (data.appointmentTypes?.length) setBkApptType(data.appointmentTypes[0])
+            } catch {
+                setBkConfigError("Unable to load clinic information. Please call " + CLINIC_PHONE_DISPLAY + ".")
+            }
+        })()
+    }, [section, bkConfig, bkConfigError])
+
+    // Default the vet to the first one at the chosen branch.
+    useEffect(() => {
+        if (!bkBranch || !bkBranches[bkBranch]) return
+        setBkResource(bkBranches[bkBranch][0])
+    }, [bkBranch, bkBranches])
+
+    // Fetch availability whenever date / vet / service changes.
+    useEffect(() => {
+        if (!bkDate || !bkResource || !bkApptType) return
+        setBkSlotsLoading(true)
+        setBkSlots([])
+        setBkSlot(null)
+        fetch(`${API_BASE}/api/slots?date=${bkDate}&appt_type_uid=${bkApptType.uid}&resource_uid=${bkResource.uid}&duration=${bkApptType.duration || 30}`)
+            .then((r) => r.json())
+            .then((d) => { setBkSlots(d.slots || []); setBkSlotsLoading(false) })
+            .catch(() => setBkSlotsLoading(false))
+    }, [bkDate, bkResource, bkApptType])
 
     if (checkingSession) {
         return (
@@ -1598,27 +1826,29 @@ function AccountPortal({ onBackToBooking }) {
         return (
             <div className="nvc-wrap">
                 <style>{css}</style>
-                <div className="nvc-auth">
-                    <div className="nvc-auth-side">
-                        <div className="nvc-auth-logo">Noble</div>
-                        <div>
-                            <h1>Your pet's records, in one place</h1>
-                            <p>Book appointments, see visit history, and keep track of what is due. No paperwork to dig out.</p>
-                            <ul>
-                                {[
-                                    "Book at any clinic, with any vet",
-                                    "Every consultation and result, saved",
-                                    "Reminders before vaccinations fall due",
-                                ].map((t) => (
-                                    <li key={t}>
-                                        <CheckIcon />
-                                        <span>{t}</span>
-                                    </li>
-                                ))}
-                            </ul>
+                <div className={isMobile ? "nvc-auth-mobile" : "nvc-auth-desktop"}>
+                    {!isMobile && (
+                        <div className="nvc-auth-side">
+                            <div className="nvc-auth-logo">Noble</div>
+                            <div>
+                                <h1>Your pet's records, in one place</h1>
+                                <p>Book appointments, see visit history, and keep track of what is due. No paperwork to dig out.</p>
+                                <ul>
+                                    {[
+                                        "Book at any clinic, with any vet",
+                                        "Every consultation and result, saved",
+                                        "Reminders before vaccinations fall due",
+                                    ].map((t) => (
+                                        <li key={t}>
+                                            <CheckIcon />
+                                            <span>{t}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                            <small>© Noble Veterinary Clinics</small>
                         </div>
-                        <small>© Noble Veterinary Clinics</small>
-                    </div>
+                    )}
                     <div className="nvc-auth-panel">
                         <div className="nvc-auth-card">
                             <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
@@ -1829,15 +2059,94 @@ function AccountPortal({ onBackToBooking }) {
     const homeNextAppt = upcomingAppts[0] ?? null
     const homeUpcomingRest = upcomingAppts.slice(1, 6)
 
+    // ── Booking helpers ───────────────────────────────────────────────────
+    const BK_STEPS = ["clinic", "service", "vet", "time", "pet", "confirm"]
+    const bkKey = BK_STEPS[bkStep]
+    const bkPet = pets?.find((p) => p.id === bkPetId) || null
+    const bkTomorrow = new Date()
+    bkTomorrow.setDate(bkTomorrow.getDate() + 1)
+    const bkMinDate = bkTomorrow.toISOString().split("T")[0]
+
+    const bkCanContinue = {
+        clinic: !!bkBranch,
+        service: !!bkApptType,
+        vet: !!bkResource,
+        time: !!bkSlot,
+        pet: !!bkPet,
+        confirm: true,
+    }[bkKey]
+
+    const bkReset = () => {
+        setBkStep(0); setBkBranch(""); setBkResource(null); setBkDate("")
+        setBkSlots([]); setBkSlot(null); setBkPetId(null); setBkNotes("")
+        setBkError(""); setBkRef(null)
+        if (bkConfig?.appointmentTypes?.length) setBkApptType(bkConfig.appointmentTypes[0])
+    }
+
+    const startBooking = (petId) => {
+        bkReset()
+        if (petId) setBkPetId(petId)
+        setHealthOverviewPetId(null)
+        setConsultId(null)
+        setSection("book")
+    }
+
+    // Books against the logged-in contact — no email/name entry, we already
+    // have them on `profile` from /api/auth/me.
+    const bkConfirm = async () => {
+        setBkError("")
+        setBkSaving(true)
+        try {
+            const res = await fetch(`${API_BASE}/api/book`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    email: profile?.email || "",
+                    owner_name: `${profile?.first_name || ""} ${profile?.last_name || ""}`.trim(),
+                    owner_phone: profile?.phone || "",
+                    contact_id: profile?.id,
+                    contact_uid: profile?.uid,
+                    animal_id: bkPet?.id,
+                    animal_uid: bkPet?.uid,
+                    appt_type_uid: bkApptType?.uid,
+                    resource_uid: bkResource?.uid,
+                    start_time: bkSlot?.start_time,
+                    start_iso: bkSlot?.start_iso,
+                    end_time: bkSlot?.end_time,
+                    duration: bkApptType?.duration ?? 30,
+                    description: `${bkApptType?.name} — ${bkBranch}${bkNotes ? ` | ${bkNotes}` : ""}`,
+                }),
+            })
+            const data = await res.json()
+            if (!data.success) throw new Error(data.error || "Booking failed")
+            setBkRef(data.reference)
+            refreshAppointments()
+        } catch {
+            setBkError("Couldn't confirm your booking. Please try again or call " + CLINIC_PHONE_DISPLAY + ".")
+        }
+        setBkSaving(false)
+    }
+
+    // Deduped branch list for the Account page (BRANCH_MAP has DIP twice).
+    const clinicList = (() => {
+        const seen = new Set()
+        return (bkSeparations || []).filter((sp) => {
+            if (!sp?.name || seen.has(sp.name)) return false
+            seen.add(sp.name)
+            return true
+        })
+    })()
+
     const NAV_ITEMS = [
         { key: "home", label: "Dashboard" },
-        { key: "book", label: "Book appointment", action: onBackToBooking },
+        { key: "book", label: "Book appointment" },
         { key: "pets", label: "My pets" },
         { key: "owner", label: "Account" },
     ]
     const MOBILE_TAB_LABELS = { home: "Home", book: "Book", pets: "Pets", owner: "Profile" }
     const SECTION_TITLES = {
         home: "Home",
+        book: "Book appointment",
         owner: "Account",
         pets: "My pets",
         bookings: "Bookings",
@@ -1845,11 +2154,29 @@ function AccountPortal({ onBackToBooking }) {
     }
 
     const mobileBack = () => {
+        if (ownerDetails) return setOwnerDetails(false)
         if (consultId) return setConsultId(null)
         if (healthOverviewPetId) return setHealthOverviewPetId(null)
         setSection("home")
     }
     const mobileShowsBack = section !== "home" || !!healthOverviewPetId || !!consultId
+
+    // Per-pet Standard of Care roll-up. Returns null when SOC couldn't be read
+    // at all (missing scope / fetch failure) so callers can stay honest rather
+    // than rendering "Up to date" off the back of no data.
+    const petSoc = (petId) => (socOk && soc ? soc[petId] ?? null : null)
+
+    // One-line status for the pet cards — mirrors the prototype's
+    // "Up to date" / "Worming due" line, but only ever from real SOC data.
+    const petStatus = (petId) => {
+        const entry = petSoc(petId)
+        if (!entry) return null
+        if (entry.headline) return { text: entry.headline, tone: entry.overdue_count ? "urgent" : "warn" }
+        return { text: "Up to date", tone: "ok" }
+    }
+
+    const fmtDue = (sec) =>
+        sec ? new Date(sec * 1000).toLocaleDateString("en-AE", { day: "numeric", month: "short", year: "numeric" }) : null
 
     const petAvatar = (p, size) =>
         p?.photo_url ? (
@@ -1867,34 +2194,36 @@ function AccountPortal({ onBackToBooking }) {
     return (
         <div className="nvc-wrap">
             <style>{css}</style>
-            <div className="nvc-app">
-                <aside className="nvc-side">
-                    <div className="nvc-side-logo">Noble</div>
-                    <nav>
-                        {NAV_ITEMS.map((item) => (
-                            <button
-                                key={item.key}
-                                className={section === item.key ? "on" : ""}
-                                onClick={() => (item.action ? item.action() : (setSection(item.key), setHealthOverviewPetId(null)))}
-                            >
-                                {SIDE_ICONS[item.key]}
-                                {item.label}
-                            </button>
-                        ))}
-                    </nav>
-                    <div className="nvc-side-em">
-                        <b><span className="dot" /> Emergency</b>
-                        <span>24/7 emergency care available</span>
-                        <a href={`tel:${CLINIC_PHONE}`}>Call {CLINIC_PHONE_DISPLAY}</a>
-                    </div>
-                    <div className="nvc-side-me">
-                        <span className="av">{initials(`${profile?.first_name || ""} ${profile?.last_name || ""}`)}</span>
-                        <span>
-                            <b>{profile?.first_name} {profile?.last_name}</b>
-                            <span>{profile?.email || profile?.phone}</span>
-                        </span>
-                    </div>
-                </aside>
+            <div className={isMobile ? "nvc-app-mobile" : "nvc-app-desktop"}>
+                {!isMobile && (
+                    <aside className="nvc-side">
+                        <div className="nvc-side-logo">Noble</div>
+                        <nav>
+                            {NAV_ITEMS.map((item) => (
+                                <button
+                                    key={item.key}
+                                    className={section === item.key ? "on" : ""}
+                                    onClick={() => (item.key === "book" ? startBooking() : (setSection(item.key), setHealthOverviewPetId(null)))}
+                                >
+                                    {SIDE_ICONS[item.key]}
+                                    {item.label}
+                                </button>
+                            ))}
+                        </nav>
+                        <div className="nvc-side-em">
+                            <b><span className="dot" /> Emergency</b>
+                            <span>24/7 emergency care available</span>
+                            <a href={`tel:${CLINIC_PHONE}`}>Call {CLINIC_PHONE_DISPLAY}</a>
+                        </div>
+                        <div className="nvc-side-me">
+                            <span className="av">{initials(`${profile?.first_name || ""} ${profile?.last_name || ""}`)}</span>
+                            <span>
+                                <b>{profile?.first_name} {profile?.last_name}</b>
+                                <span>{profile?.email || profile?.phone}</span>
+                            </span>
+                        </div>
+                    </aside>
+                )}
 
                 <div className="nvc-mheader">
                     {mobileShowsBack ? (
@@ -1910,24 +2239,58 @@ function AccountPortal({ onBackToBooking }) {
                     </a>
                 </div>
 
-                <main className="nvc-main">
-                    {/* ══ HOME ═══════════════════════════════════════════════════ */}
-                    {section === "home" && (
-                        <>
-                            <div className="nvc-phead">
-                                <div>
-                                    <h1>{greeting}{profile?.first_name ? `, ${profile.first_name}` : ""}</h1>
-                                    <p>{pets ? `${pets.length} pet${pets.length === 1 ? "" : "s"} on file` : "Loading your account…"}</p>
-                                </div>
-                                <button className="nvc-btn" onClick={onBackToBooking}>Book appointment</button>
+                <main className={`nvc-main ${isMobile ? (section === "home" ? "nvc-main-mhome" : `nvc-main-mobile${section === "owner" ? " nvc-main-mwhite" : ""}`) : "nvc-main-desktop"}`}>
+                    {/* ══ HOME — MOBILE ══════════════════════════════════════════
+                        Standalone mobile home screen, built to match the phone
+                        prototype. Shares no markup or CSS with the desktop home
+                        below — same data + handlers, different tree. ═══════════ */}
+                    {section === "home" && isMobile && (
+                        <div className="nvc-mhome">
+                            <div className="hi">
+                                <small>{greeting}</small>
+                                <h2>Hello{profile?.first_name ? `, ${profile.first_name}` : ""}</h2>
                             </div>
 
-                            <div className="nvc-quickgrid">
-                                <button className="nvc-quicktile" onClick={onBackToBooking}>
+                            <div className="next">
+                                <div className="t">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M16 3v4M8 3v4M3 11h18" /></svg>
+                                    Next appointment
+                                </div>
+                                {!appointments ? (
+                                    <span>Loading…</span>
+                                ) : homeNextAppt ? (
+                                    <>
+                                        <b>{[pets?.find((p) => p.id === homeNextAppt.animal_id)?.name, homeNextAppt.description || "Appointment"].filter(Boolean).join(" · ")}</b>
+                                        <span>{fmtDate(homeNextAppt.start_time)}, {fmtTime(homeNextAppt.start_time)}</span>
+                                        {(homeNextAppt.resource_name || homeNextAppt.location_address) && (
+                                            <span>{[homeNextAppt.resource_name, homeNextAppt.location_address].filter(Boolean).join(" · ")}</span>
+                                        )}
+                                        <div className="acts">
+                                            {homeNextAppt.directions_url && (
+                                                <a className="w" href={homeNextAppt.directions_url} target="_blank" rel="noreferrer">Directions</a>
+                                            )}
+                                            <a href={`tel:${CLINIC_PHONE}`}>Call clinic</a>
+                                            <button onClick={() => handleCancelAppointment(homeNextAppt.id)} disabled={cancellingId === homeNextAppt.id}>
+                                                {cancellingId === homeNextAppt.id ? "Cancelling…" : "Cancel"}
+                                            </button>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span>No upcoming appointments.</span>
+                                        <div className="acts">
+                                            <button className="w" onClick={() => startBooking()}>Book now</button>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+
+                            <div className="quick">
+                                <button className="q" onClick={() => startBooking()}>
                                     <span className="ic">{SIDE_ICONS.book}</span>
                                     <b>Book<br />appointment</b>
                                 </button>
-                                <a className="nvc-quicktile em" href={`tel:${CLINIC_PHONE}`}>
+                                <a className="q red" href={`tel:${CLINIC_PHONE}`}>
                                     <span className="ic">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z" /></svg>
                                     </span>
@@ -1935,7 +2298,83 @@ function AccountPortal({ onBackToBooking }) {
                                 </a>
                             </div>
 
-                            <div className="nvc-grid2">
+                            <div className="pad">
+                                <div className="sechd">
+                                    <b>Your pets</b>
+                                    <button onClick={openAddPet}>Add pet</button>
+                                </div>
+                            </div>
+                            <div className="petrow">
+                                {pets && (
+                                    <>
+                                        {pets.map((p) => (
+                                            <button
+                                                key={p.id}
+                                                className="pcard"
+                                                onClick={() => {
+                                                    setSection("pets")
+                                                    openHealthOverview(p.id)
+                                                }}
+                                            >
+                                                <span className="av">{petAvatar(p, 48)}</span>
+                                                <b>{p.name}</b>
+                                                {(() => {
+                                                    const st = petStatus(p.id)
+                                                    return st
+                                                        ? <span className={`stat ${st.tone}`}>{st.text}</span>
+                                                        : <span>{p.breed || p.species}</span>
+                                                })()}
+                                            </button>
+                                        ))}
+                                        <button className="pcard add" onClick={openAddPet}>+ Add</button>
+                                    </>
+                                )}
+                            </div>
+
+                            <div className="pad">
+                                <div className="sechd">
+                                    <b>Recent visits</b>
+                                    <button onClick={() => setSection("bookings")}>See all</button>
+                                </div>
+                                {!appointments ? (
+                                    <div className="mempty">Loading…</div>
+                                ) : pastAppts.length === 0 ? (
+                                    <div className="mempty">No visits yet.</div>
+                                ) : (
+                                    pastAppts.slice(0, 3).map((a) => {
+                                        const p = pets?.find((x) => x.id === a.animal_id)
+                                        return (
+                                            <button key={a.id} className="hrow" onClick={() => setSection("bookings")}>
+                                                <span className="dt">
+                                                    <b>{new Date(a.start_time * 1000).toLocaleDateString("en-AE", { day: "numeric", month: "short" })}</b>
+                                                    <small>{new Date(a.start_time * 1000).getFullYear()}</small>
+                                                </span>
+                                                <span className="tx">
+                                                    <b>{a.description || "Appointment"}</b>
+                                                    <span>{p?.name ? `${p.name} · ` : ""}{a.resource_name}</span>
+                                                </span>
+                                                <span className="ar"><ChevronIcon /></span>
+                                            </button>
+                                        )
+                                    })
+                                )}
+                                <div style={{ height: 14 }} />
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ══ HOME — DESKTOP ═════════════════════════════════════════ */}
+                    {section === "home" && !isMobile && (
+                        <>
+                            <div className="nvc-phead">
+                                <div>
+                                    <h1>{greeting}{profile?.first_name ? `, ${profile.first_name}` : ""}</h1>
+                                    <p>{pets ? `${pets.length} pet${pets.length === 1 ? "" : "s"} on file` : "Loading your account…"}</p>
+                                </div>
+                                <button className="nvc-btn" onClick={() => startBooking()}>Book appointment</button>
+                            </div>
+
+                            <div className="nvc-grid2-desktop">
                                 <div className="nvc-nextcard">
                                     <div className="t">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M16 3v4M8 3v4M3 11h18" /></svg>
@@ -1950,7 +2389,7 @@ function AccountPortal({ onBackToBooking }) {
                                             {(homeNextAppt.resource_name || homeNextAppt.location_address) && (
                                                 <span>{[homeNextAppt.resource_name, homeNextAppt.location_address].filter(Boolean).join(" · ")}</span>
                                             )}
-                                            <div className="acts">
+                                            <div className="acts-desktop">
                                                 {homeNextAppt.directions_url && (
                                                     <a className="w" href={homeNextAppt.directions_url} target="_blank" rel="noreferrer">Directions</a>
                                                 )}
@@ -1963,8 +2402,8 @@ function AccountPortal({ onBackToBooking }) {
                                     ) : (
                                         <>
                                             <span>No upcoming appointments.</span>
-                                            <div className="acts">
-                                                <button className="w" onClick={onBackToBooking}>Book now</button>
+                                            <div className="acts-desktop">
+                                                <button className="w" onClick={() => startBooking()}>Book now</button>
                                             </div>
                                         </>
                                     )}
@@ -2006,7 +2445,7 @@ function AccountPortal({ onBackToBooking }) {
                             <div className="nvc-phead" style={{ margin: "34px 0 16px" }}>
                                 <div><h1 style={{ fontSize: 24 }}>Your pets</h1></div>
                             </div>
-                            <div className="nvc-petgrid nvc-home-petgrid">
+                            <div className="nvc-petgrid-desktop">
                                 {!pets ? (
                                     <div className="nvc-portal-empty">Loading…</div>
                                 ) : (
@@ -2022,31 +2461,15 @@ function AccountPortal({ onBackToBooking }) {
                                             >
                                                 <span className="av">{petAvatar(p, 54)}</span>
                                                 <b>{p.name}</b>
-                                                <span>{p.breed || p.species}</span>
+                                                {(() => {
+                                                    const st = petStatus(p.id)
+                                                    return st
+                                                        ? <span className={`stat ${st.tone}`}>{st.text}</span>
+                                                        : <span>{p.breed || p.species}</span>
+                                                })()}
                                             </button>
                                         ))}
                                         <button className="nvc-pcard add" onClick={openAddPet}>+ Add a pet</button>
-                                    </>
-                                )}
-                            </div>
-                            <div className="nvc-petrow-mobile">
-                                {pets && (
-                                    <>
-                                        {pets.map((p) => (
-                                            <button
-                                                key={p.id}
-                                                className="nvc-pcard"
-                                                onClick={() => {
-                                                    setSection("pets")
-                                                    openHealthOverview(p.id)
-                                                }}
-                                            >
-                                                <span className="av">{petAvatar(p, 54)}</span>
-                                                <b>{p.name}</b>
-                                                <span>{p.breed || p.species}</span>
-                                            </button>
-                                        ))}
-                                        <button className="nvc-pcard add" onClick={openAddPet}>+ Add</button>
                                     </>
                                 )}
                             </div>
@@ -2093,7 +2516,7 @@ function AccountPortal({ onBackToBooking }) {
                                 <button className="nvc-btn out sm" style={{ margin: 0 }} onClick={() => setHealthOverviewPetId(null)}>← All pets</button>
                                 <button className="nvc-btn out sm" onClick={() => openEditPet(activePet)}>Edit {activePet.name}'s info</button>
                             </div>
-                            <div className="nvc-pettop">
+                            <div className={isMobile ? "nvc-pettop-mobile" : "nvc-pettop-desktop"}>
                                 <span className="av" style={{ position: "relative" }}>
                                     {petAvatar(activePet, 96)}
                                     <label style={{ position: "absolute", bottom: 0, right: 0, cursor: "pointer" }}>
@@ -2123,14 +2546,14 @@ function AccountPortal({ onBackToBooking }) {
                                 <div>
                                     <h1>{activePet.name}</h1>
                                     <p>{[activePet.breed || activePet.species, activePet.sex, activePet.age].filter(Boolean).join(" · ")}</p>
-                                    <div className="nvc-chips">
+                                    <div className={isMobile ? "nvc-chips-mobile" : "nvc-chips-desktop"}>
                                         <span>{activePet.weight ? `${activePet.weight} ${activePet.weight_unit || ""}`.trim() : "Weight on file soon"}</span>
                                         <span>{activePet.microchip_number ? "Microchipped" : "No microchip on file"}</span>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="nvc-grid2">
+                            <div className={isMobile ? "nvc-grid2-mobile" : "nvc-grid2-desktop"}>
                                 <div>
                                     <div className="nvc-panel">
                                         <h3>Visit history</h3>
@@ -2154,13 +2577,72 @@ function AccountPortal({ onBackToBooking }) {
                                     </div>
                                 </div>
                                 <div>
-                                    <div className="nvc-due ok" style={{ marginBottom: 16 }}>
-                                        <div className="r">
-                                            <span><b>Vaccinations</b><small>Not tracked here yet</small></span>
-                                            <span className="st">On file at clinic</span>
+                                    {(() => {
+                                        const entry = petSoc(activePet.id)
+                                        // No SOC data readable → keep the honest placeholder rather
+                                        // than implying everything is up to date.
+                                        if (!entry) {
+                                            return (
+                                                <div className="nvc-due ok" style={{ marginBottom: 16 }}>
+                                                    <div className="r">
+                                                        <span><b>Vaccinations &amp; care</b><small>Not tracked here yet</small></span>
+                                                        <span className="st">On file at clinic</span>
+                                                    </div>
+                                                </div>
+                                            )
+                                        }
+                                        const overdue = entry.overdue_count > 0
+                                        return (
+                                            <div className={`nvc-due ${overdue || entry.due_soon_count ? "warn" : "ok"}`} style={{ marginBottom: 16 }}>
+                                                {entry.items.length === 0 ? (
+                                                    <div className="r">
+                                                        <span><b>Vaccinations &amp; care</b><small>No schedule set up yet</small></span>
+                                                        <span className="st">On file at clinic</span>
+                                                    </div>
+                                                ) : (
+                                                    entry.items.map((it, i) => (
+                                                        <div className="r" key={`${it.name}-${i}`}>
+                                                            <span>
+                                                                <b>{it.name}</b>
+                                                                <small>
+                                                                    {it.status === "overdue" ? `Was due ${fmtDue(it.due_at)}`
+                                                                        : it.due_at ? `Due ${fmtDue(it.due_at)}`
+                                                                        : "No due date set"}
+                                                                    {it.last_fulfilled_at ? ` · last done ${fmtDue(it.last_fulfilled_at)}` : ""}
+                                                                </small>
+                                                            </span>
+                                                            <span className={`st ${it.status === "overdue" ? "u" : it.status === "ok" ? "" : "w"}`}>
+                                                                {it.status === "overdue" ? "Overdue"
+                                                                    : it.status === "due_soon" ? "Due soon"
+                                                                    : it.status === "unscheduled" ? "—"
+                                                                    : "Up to date"}
+                                                            </span>
+                                                        </div>
+                                                    ))
+                                                )}
+                                            </div>
+                                        )
+                                    })()}
+
+                                    {/* Vaccination history — what was actually administered */}
+                                    {vaccinationsOk && vaccinations?.[activePet.id]?.length > 0 && (
+                                        <div className="nvc-panel" style={{ marginBottom: 16 }}>
+                                            <h3>Vaccination history</h3>
+                                            {vaccinations[activePet.id].slice(0, 6).map((v) => (
+                                                <div className="nvc-hrow" key={v.id ?? `${v.name}-${v.given_at}`}>
+                                                    <span className="dt">
+                                                        <b>{v.given_at ? new Date(v.given_at * 1000).toLocaleDateString("en-AE", { day: "numeric", month: "short" }) : "—"}</b>
+                                                        <small>{v.given_at ? new Date(v.given_at * 1000).getFullYear() : ""}</small>
+                                                    </span>
+                                                    <span className="tx">
+                                                        <b>{v.name}</b>
+                                                        <span>{[v.vet, v.batch ? `Batch ${v.batch}` : null].filter(Boolean).join(" · ")}</span>
+                                                    </span>
+                                                </div>
+                                            ))}
                                         </div>
-                                    </div>
-                                    <button className="nvc-btn full" onClick={onBackToBooking}>Book appointment for {activePet.name}</button>
+                                    )}
+                                    <button className="nvc-btn full" onClick={() => startBooking(activePet.id)}>Book appointment for {activePet.name}</button>
                                 </div>
                             </div>
                         </>
@@ -2180,7 +2662,7 @@ function AccountPortal({ onBackToBooking }) {
                                     </p>
                                 </div>
                             </div>
-                            <div className="nvc-cgrid">
+                            <div className={isMobile ? "nvc-cgrid-mobile" : "nvc-cgrid-desktop"}>
                                 <div>
                                     <div className="nvc-blk">
                                         <p className="bl">Notes</p>
@@ -2195,23 +2677,230 @@ function AccountPortal({ onBackToBooking }) {
                                     </div>
                                     <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
                                         <a className="nvc-btn out sm" href={CLINIC_WHATSAPP}>Ask a question</a>
-                                        <button className="nvc-btn sm" onClick={onBackToBooking}>Book follow-up</button>
+                                        <button className="nvc-btn sm" onClick={() => startBooking(activePet?.id)}>Book follow-up</button>
                                     </div>
                                 </div>
                             </div>
                         </>
                     )}
 
+                    {/* ══ BOOK APPOINTMENT (in-portal) ═══════════════════════════
+                        Same steps as the public BookingWizard minus the
+                        identify + personal-details steps — the contact is
+                        already known from the session. ═════════════════════ */}
+                    {section === "book" && (
+                        <>
+                            {bkConfigError ? (
+                                <div className="nvc-panel"><p style={{ margin: 0 }}>{bkConfigError}</p></div>
+                            ) : bkRef ? (
+                                <div className="nvc-done">
+                                    <div className="ring"><CheckIcon /></div>
+                                    <h2>You're booked in</h2>
+                                    <p>We've sent the details to {profile?.email || "your email"}. See you soon.</p>
+                                    <div className="nvc-refbox">
+                                        <div className="nvc-ref-label">Reference</div>
+                                        <div className="nvc-ref-code">{bkRef}</div>
+                                    </div>
+                                    <div className="nvc-sum" style={{ textAlign: "left", marginBottom: 20 }}>
+                                        <div className="r"><span>Pet</span><b>{bkPet?.name}</b></div>
+                                        <div className="r"><span>Service</span><b>{bkApptType?.name}</b></div>
+                                        <div className="r"><span>Vet</span><b>{bkResource?.name}</b></div>
+                                        <div className="r"><span>Clinic</span><b>{bkBranch}</b></div>
+                                        <div className="r"><span>When</span><b>{bkDate ? new Date(bkDate + "T12:00:00").toLocaleDateString("en-AE", { day: "numeric", month: "short", year: "numeric" }) : ""}{bkSlot ? `, ${bkSlot.label}` : ""}</b></div>
+                                    </div>
+                                    <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+                                        <button className="nvc-btn out" onClick={() => startBooking()}>Book another</button>
+                                        <button className="nvc-btn" onClick={() => { setSection("home"); bkReset() }}>Done</button>
+                                    </div>
+                                </div>
+                            ) : !bkConfig ? (
+                                <div className="nvc-loading-wrap"><div className="nvc-spinner" /><p style={{ color: T.muted, fontSize: 14 }}>Loading clinic information…</p></div>
+                            ) : (
+                                <>
+                                    {!isMobile && (
+                                        <div className="nvc-phead" style={{ marginBottom: 18 }}>
+                                            <div>
+                                                <h1>Book an appointment</h1>
+                                                <p>Booking as {profile?.first_name} {profile?.last_name}</p>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="nvc-steps">
+                                        {BK_STEPS.map((k, i) => (<i key={k} className={i <= bkStep ? "on" : ""} />))}
+                                    </div>
+
+                                    {bkKey === "clinic" && (
+                                        <>
+                                            <div className="nvc-h1">Which clinic?</div>
+                                            <div className="nvc-h1-sub">Choose where you would like to be seen</div>
+                                            <div className={isMobile ? "nvc-optgrid-mobile" : "nvc-optgrid-desktop"}>
+                                                {Object.keys(bkBranches).map((branch) => {
+                                                    const sep = bkSeparations.find((x) => x.name === branch)
+                                                    return (
+                                                        <button key={branch} className={`nvc-opt ${bkBranch === branch ? "sel" : ""}`} onClick={() => setBkBranch(branch)}>
+                                                            <span className="nvc-opt-ic">{sep?.photo ? <img src={sep.photo} alt="" /> : "🏥"}</span>
+                                                            <span className="nvc-opt-tx">
+                                                                <b>{branch}</b>
+                                                                <span>{sep?.address || sep?.hours || ""}</span>
+                                                                {sep?.hours && sep?.address && <span>{sep.hours}</span>}
+                                                            </span>
+                                                            <span className="nvc-opt-tick"><CheckIcon /></span>
+                                                        </button>
+                                                    )
+                                                })}
+                                            </div>
+                                        </>
+                                    )}
+
+                                    {bkKey === "service" && (
+                                        <>
+                                            <div className="nvc-h1">What do they need?</div>
+                                            <div className="nvc-h1-sub">{bkBranch}</div>
+                                            <div className={isMobile ? "nvc-optgrid-mobile" : "nvc-optgrid-desktop"}>
+                                                {(bkConfig.appointmentTypes || []).map((t, i) => (
+                                                    <button key={t.uid} className={`nvc-opt ${bkApptType?.uid === t.uid ? "sel" : ""}`} onClick={() => setBkApptType(t)}>
+                                                        <span className="nvc-opt-ic">{t.photo ? <img src={t.photo} alt="" /> : REASON_ICONS[i % REASON_ICONS.length]}</span>
+                                                        <span className="nvc-opt-tx"><b>{t.name}</b><span>{t.duration} minutes</span></span>
+                                                        <span className="nvc-opt-tick"><CheckIcon /></span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </>
+                                    )}
+
+                                    {bkKey === "vet" && (
+                                        <>
+                                            <div className="nvc-h1">Who would you like to see?</div>
+                                            <div className="nvc-h1-sub">{bkBranch} · {bkApptType?.name}</div>
+                                            <div className={isMobile ? "nvc-optgrid-mobile" : "nvc-optgrid-desktop"}>
+                                                {(bkBranches[bkBranch] || []).map((r) => (
+                                                    <button key={r.uid} className={`nvc-opt vopt ${bkResource?.uid === r.uid ? "sel" : ""}`} onClick={() => setBkResource(r)}>
+                                                        <span className="nvc-opt-ic">{r.photo ? <img src={r.photo} alt="" /> : initials(r.name)}</span>
+                                                        <span className="nvc-opt-tx"><b>{r.name}</b><span>Available at {bkBranch}</span></span>
+                                                        <span className="nvc-opt-tick"><CheckIcon /></span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </>
+                                    )}
+
+                                    {bkKey === "time" && (
+                                        <>
+                                            <div className="nvc-h1">Pick a time</div>
+                                            <div className="nvc-h1-sub">{bkResource?.name}</div>
+                                            <div className={isMobile ? "nvc-timewrap-mobile" : "nvc-timewrap-desktop"}>
+                                                <div>
+                                                    <DayStrip selectedDate={bkDate} onSelect={setBkDate} minDate={bkMinDate} />
+                                                    {!bkDate && <div style={{ fontSize: 13, color: T.muted }}>Select a date to see available times.</div>}
+                                                    {bkDate && bkSlotsLoading && <div style={{ fontSize: 13, color: T.muted }}>Checking availability…</div>}
+                                                    {bkDate && !bkSlotsLoading && bkSlots.length === 0 && (
+                                                        <div style={{ fontSize: 13, color: T.muted }}>No times available on this date. Please try another day.</div>
+                                                    )}
+                                                    {bkDate && !bkSlotsLoading && bkSlots.length > 0 && (
+                                                        <div className={isMobile ? "nvc-slots-mobile" : "nvc-slots-desktop"}>
+                                                            {bkSlots.map((slot, i) => (
+                                                                <button key={i} className={`nvc-slotbtn ${bkSlot?.start_time === slot.start_time ? "sel" : ""}`} onClick={() => setBkSlot(slot)}>
+                                                                    {slot.label}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                {!isMobile && (
+                                                    <div>
+                                                        <p style={{ fontSize: 11, letterSpacing: "0.13em", textTransform: "uppercase", color: T.blue, fontWeight: 500, margin: "0 0 10px" }}>Booking summary</p>
+                                                        <div className="nvc-sum">
+                                                            <div className="r"><span>Clinic</span><b>{bkBranch}</b></div>
+                                                            <div className="r"><span>Service</span><b>{bkApptType?.name}</b></div>
+                                                            <div className="r"><span>Vet</span><b>{bkResource?.name}</b></div>
+                                                            <div className="r"><span>When</span><b>{bkDate ? new Date(bkDate + "T12:00:00").toLocaleDateString("en-AE", { day: "numeric", month: "short" }) : "—"}{bkSlot ? `, ${bkSlot.label}` : ""}</b></div>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </>
+                                    )}
+
+                                    {bkKey === "pet" && (
+                                        <>
+                                            <div className="nvc-h1">Who is coming in?</div>
+                                            <div className="nvc-h1-sub">Choose one of your pets</div>
+                                            {!pets ? (
+                                                <div className="nvc-portal-empty">Loading your pets…</div>
+                                            ) : (
+                                                <div className={isMobile ? "nvc-optgrid-mobile" : "nvc-optgrid-desktop"}>
+                                                    {pets.map((p) => (
+                                                        <button key={p.id} className={`nvc-opt ${bkPetId === p.id ? "sel" : ""}`} onClick={() => setBkPetId(p.id)}>
+                                                            <span className="nvc-opt-ic">{petAvatar(p, 42)}</span>
+                                                            <span className="nvc-opt-tx"><b>{p.name}</b><span>{[p.breed || p.species, p.age].filter(Boolean).join(" · ")}</span></span>
+                                                            <span className="nvc-opt-tick"><CheckIcon /></span>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            <button className="nvc-addpet" onClick={openAddPet}>+ Add a pet</button>
+                                        </>
+                                    )}
+
+                                    {bkKey === "confirm" && (
+                                        <>
+                                            <div className="nvc-h1">Check and confirm</div>
+                                            <div className="nvc-h1-sub">Booking as {profile?.first_name} {profile?.last_name} · {profile?.email || profile?.phone}</div>
+                                            <div className="nvc-sum" style={{ marginBottom: 18, maxWidth: 520 }}>
+                                                <div className="r"><span>Pet</span><b>{bkPet?.name}</b></div>
+                                                <div className="r"><span>Service</span><b>{bkApptType?.name}</b></div>
+                                                <div className="r"><span>Vet</span><b>{bkResource?.name}</b></div>
+                                                <div className="r"><span>Clinic</span><b>{bkBranch}</b></div>
+                                                <div className="r"><span>When</span><b>{bkDate ? new Date(bkDate + "T12:00:00").toLocaleDateString("en-AE", { weekday: "short", day: "numeric", month: "short" }) : ""}{bkSlot ? `, ${bkSlot.label}` : ""}</b></div>
+                                            </div>
+                                            <div className="nvc-form-field" style={{ maxWidth: 520 }}>
+                                                <label>Anything the vet should know? (optional)</label>
+                                                <textarea className="nvc-input" value={bkNotes} onChange={(e) => setBkNotes(e.target.value)} placeholder="Symptoms, behaviour changes, questions…" />
+                                            </div>
+                                            {bkError && <div className="nvc-error-text" style={{ marginBottom: 12 }}>{bkError}</div>}
+                                        </>
+                                    )}
+
+                                    <div style={{ display: "flex", gap: 10, marginTop: 24, flexWrap: "wrap" }}>
+                                        {bkStep > 0 && (
+                                            <button className="nvc-btn out" onClick={() => setBkStep((i) => Math.max(0, i - 1))} disabled={bkSaving}>Back</button>
+                                        )}
+                                        {bkKey === "confirm" ? (
+                                            <button className="nvc-btn" onClick={bkConfirm} disabled={bkSaving}>
+                                                {bkSaving ? "Confirming…" : "Confirm booking"}
+                                            </button>
+                                        ) : (
+                                            <button className="nvc-btn" onClick={() => setBkStep((i) => Math.min(BK_STEPS.length - 1, i + 1))} disabled={!bkCanContinue}>
+                                                Continue
+                                            </button>
+                                        )}
+                                    </div>
+                                </>
+                            )}
+                        </>
+                    )}
+
                     {/* ══ PETS LIST ══════════════════════════════════════════════ */}
                     {section === "pets" && !healthOverviewPetId && (
                         <>
-                            <div className="nvc-phead">
-                                <div>
-                                    <h1>My pets</h1>
-                                    <p>Everything on record for each of them</p>
+                            {/* The mobile top bar already reads "My pets", so mobile gets a
+                                compact section header (prototype .sechd style) instead of
+                                repeating the title in a big desktop-style page head. */}
+                            {isMobile ? (
+                                <div className="nvc-msechd">
+                                    <b>Your pets</b>
+                                    <button onClick={openAddPet}>Add pet</button>
                                 </div>
-                                <button className="nvc-btn out" onClick={openAddPet}>+ Add a pet</button>
-                            </div>
+                            ) : (
+                                <div className="nvc-phead">
+                                    <div>
+                                        <h1>My pets</h1>
+                                        <p>Everything on record for each of them</p>
+                                    </div>
+                                    <button className="nvc-btn out" onClick={openAddPet}>+ Add a pet</button>
+                                </div>
+                            )}
                             {isMobile ? (
                                 <div className="nvc-petrows-mobile">
                                     {!pets ? (
@@ -2229,6 +2918,10 @@ function AccountPortal({ onBackToBooking }) {
                                                     <span className="nvc-opt-tx">
                                                         <b>{p.name}</b>
                                                         <span>{p.breed || p.species}</span>
+                                                        {(() => {
+                                                            const st = petStatus(p.id)
+                                                            return st ? <small className={`nvc-stat ${st.tone}`}>{st.text}</small> : null
+                                                        })()}
                                                     </span>
                                                 </button>
                                                 <button
@@ -2242,7 +2935,7 @@ function AccountPortal({ onBackToBooking }) {
                                     )}
                                 </div>
                             ) : (
-                                <div className="nvc-petgrid">
+                                <div className="nvc-petgrid-desktop">
                                     {!pets ? (
                                         <div className="nvc-portal-empty">Loading your pets…</div>
                                     ) : pets.length === 0 ? (
@@ -2299,15 +2992,21 @@ function AccountPortal({ onBackToBooking }) {
                     {/* ══ ACCOUNT (Pet Owner) ═══════════════════════════════════ */}
                     {section === "owner" && profile && (
                         <>
-                            <div className="nvc-phead">
-                                <div>
-                                    <h1>Account</h1>
-                                    <p>{profile.email || profile.phone}</p>
-                                </div>
-                            </div>
-                            <div className="nvc-grid2">
-                                <div className="nvc-panel">
-                                    <h3>Your details</h3>
+                            {ownerDetails ? (
+                                /* ── Personal details sub-view (opened from the menu) ── */
+                                <>
+                                    {isMobile ? (
+                                        <div className="nvc-msechd"><b>Personal details</b></div>
+                                    ) : (
+                                        <div className="nvc-phead">
+                                            <div>
+                                                <h1>Personal details</h1>
+                                                <p>{profile.email || profile.phone}</p>
+                                            </div>
+                                            <button className="nvc-btn out sm" onClick={() => setOwnerDetails(false)}>← Back to account</button>
+                                        </div>
+                                    )}
+                                    <div className="nvc-panel" style={{ maxWidth: 620 }}>
                                     {!editingProfile ? (
                                         <>
                                             <div className="nvc-sum" style={{ marginBottom: 16 }}>
@@ -2334,7 +3033,7 @@ function AccountPortal({ onBackToBooking }) {
                                         </>
                                     ) : (
                                         <>
-                                            <div className="nvc-form-grid2">
+                                            <div className={isMobile ? "nvc-form-grid2-mobile" : "nvc-form-grid2-desktop"}>
                                                 <div className="nvc-form-field">
                                                     <label>First name</label>
                                                     <input className="nvc-input" value={profileForm.first_name} onChange={(e) => setProfileForm({ ...profileForm, first_name: e.target.value })} />
@@ -2352,7 +3051,7 @@ function AccountPortal({ onBackToBooking }) {
                                                 <label>Emirates ID</label>
                                                 <input className="nvc-input" value={profileForm.emirates_id} onChange={(e) => setProfileForm({ ...profileForm, emirates_id: e.target.value })} />
                                             </div>
-                                            <div className="nvc-form-grid2">
+                                            <div className={isMobile ? "nvc-form-grid2-mobile" : "nvc-form-grid2-desktop"}>
                                                 <div className="nvc-form-field">
                                                     <label>Date of birth</label>
                                                     <input className="nvc-input" type="date" value={profileForm.date_of_birth} onChange={(e) => setProfileForm({ ...profileForm, date_of_birth: e.target.value })} />
@@ -2375,30 +3074,115 @@ function AccountPortal({ onBackToBooking }) {
                                             </div>
                                         </>
                                     )}
-                                </div>
-                                <div className="nvc-panel">
-                                    <h3>Settings</h3>
-                                    <a className="nvc-mrow" href={CLINIC_WHATSAPP}>
-                                        <span className="ic" style={{ background: "#E4F8EC" }}>
-                                            <svg viewBox="0 0 24 24" fill="#25D366"><path d="M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2zm5.8 14.2c-.2.7-1.2 1.3-1.9 1.4-.5.1-1.1.2-3.2-.7-2.7-1.1-4.4-3.9-4.5-4-.1-.2-1.1-1.4-1.1-2.7s.7-1.9.9-2.2c.2-.2.5-.3.6-.3h.5c.2 0 .4 0 .5.4l.8 1.9c.1.2 0 .4-.1.5l-.3.4c-.1.1-.3.3-.1.5.1.3.6 1.1 1.3 1.7.9.8 1.6 1 1.9 1.2.2.1.4 0 .5-.1l.7-.8c.2-.2.3-.1.5-.1l1.8.9c.2.1.4.2.4.3v1.2z" /></svg>
-                                        </span>
-                                        <b>Message us on WhatsApp</b>
-                                        <span className="ar"><ChevronIcon /></span>
-                                    </a>
-                                    <button className="nvc-mrow" onClick={() => setSection("financials")}>
-                                        <span className="ic">{SIDE_ICONS.financials}</span>
-                                        <b>Invoices</b>
-                                        <span className="ar"><ChevronIcon /></span>
-                                    </button>
-                                    <button className="nvc-mrow" onClick={handleLogout}>
-                                        <span className="ic">
-                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 17l5-5-5-5M21 12H9M12 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7" /></svg>
-                                        </span>
-                                        <b>Sign out</b>
-                                        <span className="ar"><ChevronIcon /></span>
-                                    </button>
-                                </div>
-                            </div>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    {/* ── Profile hero: mobile only (desktop leads with the cards) ── */}
+                                    {isMobile ? (
+                                        <div className="nvc-mprof">
+                                            <div className="av">{initials(`${profile.first_name || ""} ${profile.last_name || ""}`)}</div>
+                                            <h2>{profile.first_name} {profile.last_name}</h2>
+                                            <p>{[profile.phone || profile.email, profile.code ? `Client ${profile.code}` : null].filter(Boolean).join(" · ")}</p>
+                                        </div>
+                                    ) : (
+                                        <div className="nvc-phead">
+                                            <div>
+                                                <h1>{profile.first_name} {profile.last_name}</h1>
+                                                <p>{[profile.phone || profile.email, profile.code ? `Client ${profile.code}` : null].filter(Boolean).join(" · ")}</p>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className={isMobile ? "nvc-grid2-mobile" : "nvc-grid2-desktop"}>
+                                        {/* ── Settings / Account menu ── */}
+                                        {isMobile ? (
+                                            <div>
+                                                <div className="nvc-msechd"><b>Account</b></div>
+                                                <button className="nvc-mrow" onClick={() => setOwnerDetails(true)}>
+                                                    <span className="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></svg></span>
+                                                    <b>Personal details</b>
+                                                    <span className="ar"><ChevronIcon /></span>
+                                                </button>
+                                                <button className="nvc-mrow" onClick={() => { setSection("pets"); setHealthOverviewPetId(null) }}>
+                                                    <span className="ic">{SIDE_ICONS.pets}</span>
+                                                    <b>My pets</b>
+                                                    <span className="ar"><ChevronIcon /></span>
+                                                </button>
+                                                <button className="nvc-mrow" onClick={() => setSection("financials")}>
+                                                    <span className="ic">{SIDE_ICONS.financials}</span>
+                                                    <b>Invoices</b>
+                                                    <span className="ar"><ChevronIcon /></span>
+                                                </button>
+                                                <button className="nvc-mrow" onClick={() => showToast("Reminders are managed by the clinic — call us to change them.")}>
+                                                    <span className="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 8-3 8h18s-3-1-3-8" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></svg></span>
+                                                    <b>Reminders</b>
+                                                    <span className="ar"><ChevronIcon /></span>
+                                                </button>
+                                                <a className="nvc-mrow" href={CLINIC_WHATSAPP}>
+                                                    <span className="ic" style={{ background: "#E4F8EC" }}><svg viewBox="0 0 24 24" fill="#25D366"><path d="M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2zm5.8 14.2c-.2.7-1.2 1.3-1.9 1.4-.5.1-1.1.2-3.2-.7-2.7-1.1-4.4-3.9-4.5-4-.1-.2-1.1-1.4-1.1-2.7s.7-1.9.9-2.2c.2-.2.5-.3.6-.3h.5c.2 0 .4 0 .5.4l.8 1.9c.1.2 0 .4-.1.5l-.3.4c-.1.1-.3.3-.1.5.1.3.6 1.1 1.3 1.7.9.8 1.6 1 1.9 1.2.2.1.4 0 .5-.1l.7-.8c.2-.2.3-.1.5-.1l1.8.9c.2.1.4.2.4.3v1.2z" /></svg></span>
+                                                    <b>Message us on WhatsApp</b>
+                                                    <span className="ar"><ChevronIcon /></span>
+                                                </a>
+                                                <button className="nvc-mrow" onClick={handleLogout}>
+                                                    <span className="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 17l5-5-5-5M21 12H9M12 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7" /></svg></span>
+                                                    <b>Sign out</b>
+                                                    <span className="ar"><ChevronIcon /></span>
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className="nvc-panel">
+                                                <h3>Settings</h3>
+                                                <button className="nvc-mrow" onClick={() => setOwnerDetails(true)}>
+                                                    <span className="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></svg></span>
+                                                    <b>Personal details</b>
+                                                    <span className="ar"><ChevronIcon /></span>
+                                                </button>
+                                                <button className="nvc-mrow" onClick={() => setSection("financials")}>
+                                                    <span className="ic">{SIDE_ICONS.financials}</span>
+                                                    <b>Invoices</b>
+                                                    <span className="ar"><ChevronIcon /></span>
+                                                </button>
+                                                <button className="nvc-mrow" onClick={() => showToast("Email reminders are managed by the clinic — call us to change them.")}>
+                                                    <span className="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 8-3 8h18s-3-1-3-8" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></svg></span>
+                                                    <b>Email reminders</b>
+                                                    <span className="ar"><ChevronIcon /></span>
+                                                </button>
+                                                <a className="nvc-mrow" href={CLINIC_WHATSAPP}>
+                                                    <span className="ic" style={{ background: "#E4F8EC" }}><svg viewBox="0 0 24 24" fill="#25D366"><path d="M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2zm5.8 14.2c-.2.7-1.2 1.3-1.9 1.4-.5.1-1.1.2-3.2-.7-2.7-1.1-4.4-3.9-4.5-4-.1-.2-1.1-1.4-1.1-2.7s.7-1.9.9-2.2c.2-.2.5-.3.6-.3h.5c.2 0 .4 0 .5.4l.8 1.9c.1.2 0 .4-.1.5l-.3.4c-.1.1-.3.3-.1.5.1.3.6 1.1 1.3 1.7.9.8 1.6 1 1.9 1.2.2.1.4 0 .5-.1l.7-.8c.2-.2.3-.1.5-.1l1.8.9c.2.1.4.2.4.3v1.2z" /></svg></span>
+                                                    <b>Message us on WhatsApp</b>
+                                                    <span className="ar"><ChevronIcon /></span>
+                                                </a>
+                                                <button className="nvc-mrow" onClick={handleLogout}>
+                                                    <span className="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 17l5-5-5-5M21 12H9M12 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7" /></svg></span>
+                                                    <b>Sign out</b>
+                                                    <span className="ar"><ChevronIcon /></span>
+                                                </button>
+                                            </div>
+                                        )}
+
+                                        {/* ── Your clinics (real branch data from /api/startup) ── */}
+                                        <div className={isMobile ? undefined : "nvc-panel"} style={isMobile ? { marginTop: 22 } : undefined}>
+                                            {isMobile ? <div className="nvc-msechd"><b>Your clinics</b></div> : <h3>Your clinics</h3>}
+                                            {!bkConfig && !bkConfigError ? (
+                                                <div className="nvc-portal-empty" style={{ padding: "12px 0" }}>Loading…</div>
+                                            ) : clinicList.length === 0 ? (
+                                                <div className="nvc-portal-empty" style={{ padding: "12px 0" }}>Call {CLINIC_PHONE_DISPLAY} for clinic details.</div>
+                                            ) : (
+                                                <div className="nvc-cliniclist">
+                                                    {clinicList.map((c) => (
+                                                        <div className="r" key={c.name}>
+                                                            <b>{c.name}</b>
+                                                            {c.hours && <span>{c.hours}</span>}
+                                                            {c.address && <span>{c.address}</span>}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </>
+                            )}
                         </>
                     )}
 
@@ -2487,7 +3271,7 @@ function AccountPortal({ onBackToBooking }) {
                                 <div className="nvc-portal-empty">Loading…</div>
                             ) : (
                                 <>
-                                    <div className="nvc-fin-cards">
+                                    <div className={isMobile ? "nvc-fin-cards-mobile" : "nvc-fin-cards-desktop"}>
                                         <div className="nvc-fin-card">
                                             <div className="nvc-fin-label">Current balance</div>
                                             <div className="nvc-fin-value" style={{ color: financials.current_balance > 0 ? T.urgent : T.ink }}>
@@ -2564,7 +3348,7 @@ function AccountPortal({ onBackToBooking }) {
                     <button
                         key={item.key}
                         className={section === item.key ? "on" : ""}
-                        onClick={() => (item.action ? item.action() : (setSection(item.key), setHealthOverviewPetId(null)))}
+                        onClick={() => (item.key === "book" ? startBooking() : (setSection(item.key), setHealthOverviewPetId(null)))}
                     >
                         {SIDE_ICONS[item.key]}
                         {MOBILE_TAB_LABELS[item.key]}
@@ -2581,7 +3365,7 @@ function AccountPortal({ onBackToBooking }) {
                         <label>Pet's name</label>
                         <input className="nvc-input" value={petForm.name} onChange={(e) => setPetForm({ ...petForm, name: e.target.value })} />
                     </div>
-                    <div className="nvc-form-grid2">
+                    <div className={isMobile ? "nvc-form-grid2-mobile" : "nvc-form-grid2-desktop"}>
                         <div className="nvc-form-field">
                             <label>Species</label>
                             <select className="nvc-input" value={petForm.species_id} onChange={(e) => handleSpeciesChange(e.target.value)}>
@@ -2601,7 +3385,7 @@ function AccountPortal({ onBackToBooking }) {
                             </select>
                         </div>
                     </div>
-                    <div className="nvc-form-grid2">
+                    <div className={isMobile ? "nvc-form-grid2-mobile" : "nvc-form-grid2-desktop"}>
                         <div className="nvc-form-field">
                             <label>Breed</label>
                             <select

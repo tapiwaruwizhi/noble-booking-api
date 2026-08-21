@@ -1,18 +1,12 @@
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
-  async headers() {
-    return [
-      {
-        source: "/api/:path*",
-        headers: [
-          { key: "Access-Control-Allow-Origin", value: "*" },
-          { key: "Access-Control-Allow-Methods", value: "GET, POST, OPTIONS" },
-          { key: "Access-Control-Allow-Headers", value: "Content-Type, Authorization" },
-        ],
-      },
-    ];
-  },
-};
+// NOTE: CORS headers are deliberately NOT configured here.
+//
+// `headers()` can only emit STATIC values, so the only thing it could say is
+// `Access-Control-Allow-Origin: *` — which is invalid for credentialed
+// (cookie-bearing) requests and silently overrode the correct per-origin
+// headers set by middleware.js and the portal routes. CORS now lives in exactly
+// one place: lib/cors.js, applied via middleware.js.
+const nextConfig: NextConfig = {};
 
 export default nextConfig;

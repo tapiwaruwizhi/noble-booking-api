@@ -21,8 +21,20 @@ const normalizePhone = (v = "") => v.replace(/[\s\-().+]/g, "");
 
 export async function POST(req) {
   try {
-    const { identifier } = await req.json();
+    const payload = await req.json().catch(() => null);
+    const identifier = payload?.identifier;
     if (!identifier || typeof identifier !== "string") {
+      // Symmetric with verify-otp: log the SHAPE of a rejected request so the
+      // Vercel logs distinguish "wrong route", "empty body" and "missing field"
+      // instead of leaving a bare 400.
+      console.warn("[/api/auth/request-otp] 400 — rejected request:", JSON.stringify({
+        body_parsed: payload !== null,
+        body_keys:   payload ? Object.keys(payload) : null,
+        identifier_type: typeof identifier,
+        content_type: req.headers.get("content-type"),
+        origin:      req.headers.get("origin") ?? "(none — native app)",
+        user_agent:  (req.headers.get("user-agent") || "").slice(0, 90),
+      }));
       const r = NextResponse.json({ error: "identifier is required" }, { status: 400 });
       Object.entries(getCredentialedCorsHeaders(req)).forEach(([k, v]) => r.headers.set(k, v));
       return r;
